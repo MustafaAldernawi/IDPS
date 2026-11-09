@@ -1,0 +1,19 @@
+sequenceDiagram
+ participant OP as Operator
+ participant API as Laravel API
+ participant DB as MySQL 8.4 LTS
+ participant Q as Queue
+ participant AI as FastAPI
+ participant UI as Dashboard
+ OP->>API: Register unexpected Trip, start 14:35
+ API->>DB: Commit event + audit + outbox
+ API-->>OP: Accepted / event_id
+ DB-->>Q: Reforecast requested
+ Q->>DB: As-of approved sources + active model/plan
+ Q->>AI: Predict on known data, scenarios if ETA unknown
+ AI-->>Q: Product forecasts + metadata
+ Q->>DB: Immutable new run + before/after impact
+ Q-->>UI: Updated view + risk status
+ OP->>API: ETA update / actual restart
+ API->>DB: Immutable event revision
+ DB-->>Q: New reforecast

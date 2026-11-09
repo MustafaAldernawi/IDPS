@@ -1,0 +1,40 @@
+# TASKS.md — IDPS prioritized start checklist v1.2
+
+> مصدر التذاكر الكامل: `planning/BACKLOG.csv` (119 ticket = 105 قديمة + 14 إضافية). المهام الجديدة مرتبطة باستلام بيانات 2021–2023 وتجارب AI الواقعية. هذه **خطة** وليست شهادة تنفيذ.
+
+## Track A — Foundation
+
+- [ ] RF-001 — Repository & runtime conventions (Laravel / Vue / Python / MySQL 8.4).
+- [ ] RF-002 — Authentication + policy.
+- [ ] RF-003 — Roles and unit-scoped RBAC.
+- [ ] RF-004 — Approval & immutable audit trail.
+- [ ] RF-005..RF-010 — تكملة أساس المستودع والاختبارات وCI.
+
+## Track B — Real historical records (الأولوية مع الأساس)
+
+- [ ] RF-106 — تحقق من original source manifest وSHA256.
+- [ ] RF-107 — Monthly 2021–2023 Excel field mapping و36-row data contract.
+- [ ] RF-108 — Reconcile flagged monthly sums و2023 semi-actual conflict؛ لا overwrite.
+- [ ] RF-109 — MySQL migration/import/approval for monthly observations, API, rollback & idempotency tests.
+
+## Track C — Trainable AI from V1
+
+- [ ] RF-110 — Unite research starter as non-production component and package dependencies.
+- [ ] RF-111 — Dataset Upload/Profile/Mapping UI/API, validation errors.
+- [ ] RF-112 — Approved vs research dataset snapshots, as-of tracking.
+- [ ] RF-113 — Async training jobs + baselines/Ridge/RF/XGB reproducible.
+- [ ] RF-114 — Chronological train/validate/test & leakage tests monthly.
+- [ ] RF-115 — Registry + candidate vs champion + explicit ML_NOT_READY.
+- [ ] RF-116 — Monthly forecast API and compare Actual/Target, with actuals only at correct timestamp.
+- [ ] RF-117 — Staging of newly entered months, revisions, gap handling (2024–25).
+- [ ] RF-118 — Governed monthly retrain and audit/promotion/rollback.
+- [ ] RF-119 — Event-aware reforecast adapters; unknown ETA scenarios and replay tests.
+
+## Track D — Remaining full product
+
+- [ ] 002 Data Import + 003 Operations/Events + 004 KPI + 005 Planning/Quality.
+- [ ] 007 Reforecast + 008 MLOps + 009 UI, reports, UAT and deployment readiness.
+
+### Done means
+
+API+DB migration+UI+tests+docs updated and exact command logs; no future actual features, no fabricated days, no unsafe DCS write access. `research_report.json` remains research until signed acceptance.

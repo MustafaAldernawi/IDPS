@@ -1,0 +1,23 @@
+{
+  "date": "2026-11-09",
+  "scope": "static checks + prior research unit tests, no live MySQL or Laravel deployment",
+  "ticket_count": 119,
+  "original_sources": 12,
+  "months": 36,
+  "monthly_fields": 35,
+  "sql_tables": 44,
+  "research_model_can_deploy": false,
+  "checks": {
+    "blueprint": "passed",
+    "MySQL static reference check": "passed",
+    "AI starter pytest": "7 passed",
+    "spreadsheet formula scan": "no formula errors detected",
+    "actual MySQL migrations": "not executed",
+    "Laravel / Vue UI running": "not implemented"
+  },
+  "caveats": [
+    "Raw source facts provisional until engineering sign-off",
+    "Model artifacts RESEARCH_ONLY",
+    "MySQL DDL not executed against a live server"
+  ]
+}

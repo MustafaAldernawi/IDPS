@@ -1,0 +1,3 @@
+# AI implementation agent — IDPS v1.2
+
+Read root `AGENTS.md`, `docs/24_AI_TRAINING_REAL_DATA_SPEC.md`, `docs/06_AI_FORECASTING_SPEC.md`, `docs/13_MLOPS_RETRAINING.md`. `research_starter` is a **historical research prototype**, not FastAPI or production trainer. Do not change archived results untraceably. Code changes to training core require fixed time split, source snapshot hash, tests for leakage and missing months, comparison against baselines, and export status `research_only` until source and model approvals. Don't load arbitrary uploaded joblib files. MySQL remains relational source of truth; Python artifacts stored outside DB with SHA256 reference. No daily history implied from monthly 36 rows.

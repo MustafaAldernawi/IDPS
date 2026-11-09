@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/refinery/contracts/daily_record.schema.json",
+  "title": "Daily model feature snapshot (NOT raw refinery transaction)",
+  "description": "One example derived feature row per (business_date, unit_code, product_code). Source facts must live in normalized feeds/production/events/energy tables. Every feature used for forecasting is point-in-time computed; this schema is a learning/ETL exchange contract, not a direct operator input form.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["business_date", "unit_code", "product_code", "facility_timezone", "as_of", "data_origin", "product_production_t", "label_status"],
+  "properties": {
+    "business_date": {"type": "string", "format": "date"},
+    "unit_code": {"type": "string", "minLength": 1},
+    "product_code": {"type": "string", "enum": ["LPG", "NAPHTHA", "GASOLINE", "KEROSENE", "DIESEL", "HEAVY_FUEL_OIL", "ASPHALT"]},
+    "facility_timezone": {"const": "Africa/Tripoli"},
+    "as_of": {"type": "string", "format": "date-time", "description": "Knowledge cut-off for predictors; target production may be learned later only as training label, never serving feature."},
+    "data_origin": {"type": "string", "enum": ["observed_approved", "synthetic_demo"]},
+    "crude_feed_lag1_t": {"type": ["number", "null"], "minimum": 0, "description": "Feed known prior to as_of, not same-day unknown future feed"},
+    "product_production_lag1_t": {"type": ["number", "null"], "minimum": 0},
+    "product_production_lag7_t": {"type": ["number", "null"], "minimum": 0},
+    "product_rolling7_t": {"type": ["number", "null"], "minimum": 0},
+    "known_planned_shutdown_hours": {"type": ["number", "null"], "minimum": 0, "maximum": 24},
+    "last_known_unit_status": {"type": ["string", "null"], "enum": ["running", "standby", "startup", "shutdown", "maintenance", "trip", "derated", null]},
+    "recent_unplanned_downtime_hours": {"type": ["number", "null"], "minimum": 0},
+    "known_approved_target_t": {"type": ["number", "null"], "minimum": 0},
+    "product_production_t": {"type": ["number", "null"], "minimum": 0, "description": "Approved actual TRAINING LABEL for this date, only after actual is available. Never served as an input to forecast this same date."},
+    "label_status": {"type": "string", "enum": ["approved", "pending", "missing"]},
+    "source_lineage_id": {"type": ["string", "null"], "description": "Identifier linking curated row to approved source facts"}
+  }
+}

@@ -1,0 +1,15 @@
+flowchart TD
+ A[3 years approved daily history IF available] --> B[Data quality / point-in-time feature join]
+ B --> C[Chronological train / validation / sealed test]
+ C --> D[Naive / Seasonal baseline]
+ C --> E[Random Forest & XGBoost]
+ D --> F[Compare MAE RMSE WAPE by regime]
+ E --> F
+ F --> G{Champion-Challenger gate}
+ G -->|pass and human approved| H[Register and deploy signed model]
+ G -->|fail| I[Keep current champion]
+ H --> J[Predict and store immutable run]
+ J --> K[Actual later approved]
+ K --> L[Monitor error & drift]
+ L --> M[Monthly candidate retraining]
+ M --> C

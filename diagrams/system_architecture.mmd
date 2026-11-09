@@ -1,0 +1,13 @@
+flowchart LR
+ U[Production / Engineering / Planning / Management] --> FE[Vue 3 TypeScript RTL]
+ FE --> API[Laravel REST API]
+ API --> MYSQL[(MySQL 8.4 LTS)]
+ API --> AUD[Audits + Approvals]
+ API --> JOBS[Async queue]
+ JOBS --> AI[FastAPI model service]
+ AI --> MOD[Approved model artifacts]
+ PG --> DATA[Curated point-in-time Dataset]
+ DATA --> TRAIN[Offline training + backtest]
+ TRAIN --> MOD
+ RAW[Excel/CSV / reviewed scanned reports] --> STG[Staging / Mapping / Quality]
+ STG --> MYSQL

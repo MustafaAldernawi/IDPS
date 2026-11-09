@@ -1,0 +1,816 @@
+openapi: 3.1.0
+info:
+  title: Zawiya IDPS — Integrated Data and Production System API
+  description: >-
+    Proposed V1 decision-support REST contract. This is an implementation seed,
+    not an existing server. All examples are illustrative except specifically
+    identified source report values. No industrial control endpoints.
+  version: 1.1.0-draft
+servers:
+  - url: https://refinery-internal.example.invalid/api/v1
+    description: Placeholder only; must be replaced with approved internal URL
+security:
+  - bearerAuth: []
+tags:
+  - name: Identity
+  - name: Masters
+  - name: Plans
+  - name: Production
+  - name: Imports
+  - name: Events
+  - name: KPIs
+  - name: Forecasts
+  - name: ModelGovernance
+  - name: DatasetManagement
+  - name: Training
+  - name: Jobs
+paths:
+  /auth/me:
+    get:
+      tags: [Identity]
+      operationId: getCurrentUser
+      summary: Current user and permissions
+      responses:
+        '200':
+          description: Authenticated identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /units:
+    get:
+      tags: [Masters]
+      operationId: listUnits
+      parameters:
+        - in: query
+          name: facility_id
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Unit catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/RefineryUnit'}
+  /products:
+    get:
+      tags: [Masters]
+      operationId: listProducts
+      responses:
+        '200':
+          description: Product catalog with stage and unit
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Product'}
+  /plans:
+    get:
+      tags: [Plans]
+      operationId: listTargetPlans
+      parameters:
+        - in: query
+          name: status
+          schema: {type: string, enum: [draft, submitted, approved, rejected, superseded]}
+      responses:
+        '200':
+          description: Plans with versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/TargetPlan'}
+    post:
+      tags: [Plans]
+      operationId: createTargetPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateTargetPlan'}
+      responses:
+        '201':
+          description: Plan created as draft
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TargetPlan'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/Invalid'}
+  /plans/{plan_id}/approve:
+    post:
+      tags: [Plans]
+      operationId: approveTargetPlan
+      parameters:
+        - {$ref: '#/components/parameters/PlanId'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, lock_version]
+              properties:
+                reason: {type: string, minLength: 3}
+                lock_version: {type: integer, minimum: 0}
+      responses:
+        '200':
+          description: Approved version
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TargetPlan'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /production-records:
+    get:
+      tags: [Production]
+      operationId: listProductionRecords
+      parameters:
+        - {in: query, name: date_from, schema: {type: string, format: date}}
+        - {in: query, name: date_to, schema: {type: string, format: date}}
+        - {in: query, name: product_code, schema: {type: string}}
+        - {in: query, name: unit_id, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Paginated scoped records
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/ProductionRecord'}
+                  pagination: {$ref: '#/components/schemas/Pagination'}
+    post:
+      tags: [Production]
+      operationId: createProductionRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateProductionRecord'}
+      responses:
+        '201':
+          description: Draft record
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductionRecord'}
+        '422': {$ref: '#/components/responses/Invalid'}
+  /production-records/{record_id}/approve:
+    post:
+      tags: [Production]
+      operationId: approveProductionRecord
+      parameters: [{$ref: '#/components/parameters/RecordId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lock_version]
+              properties:
+                lock_version: {type: integer, minimum: 0}
+                comment: {type: string}
+      responses:
+        '200':
+          description: Approved record
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductionRecord'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /imports:
+    post:
+      tags: [Imports]
+      operationId: createImportBatch
+      description: Original source bytes remain immutable; validation and mapping are asynchronous.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, granularity]
+              properties:
+                file: {type: string, format: binary}
+                granularity: {type: string, enum: [monthly, daily, shift, unknown]}
+                source_description: {type: string}
+      responses:
+        '202':
+          description: Batch queued
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ImportBatch'}
+        '422': {$ref: '#/components/responses/Invalid'}
+  /imports/{batch_id}/preview:
+    get:
+      tags: [Imports]
+      operationId: getImportPreview
+      parameters: [{$ref: '#/components/parameters/BatchId'}]
+      responses:
+        '200':
+          description: Readonly preview / rejects
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ImportBatch'}
+  /imports/{batch_id}/approve:
+    post:
+      tags: [Imports]
+      operationId: approveImportBatch
+      parameters: [{$ref: '#/components/parameters/BatchId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mapping_version, reason]
+              properties:
+                mapping_version: {type: string}
+                reason: {type: string, minLength: 3}
+      responses:
+        '202':
+          description: Approval commit queued
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AsyncJob'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /events:
+    get:
+      tags: [Events]
+      operationId: listOperationalEvents
+      parameters:
+        - {in: query, name: unit_id, schema: {type: string, format: uuid}}
+        - {in: query, name: status, schema: {type: string}}
+      responses:
+        '200':
+          description: Event timeline
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/OperationalEvent'}
+    post:
+      tags: [Events]
+      operationId: createOperationalEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateEvent'}
+      responses:
+        '202':
+          description: Event created; reforecast status queued or unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OperationalEventReceipt'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/Invalid'}
+  /events/{event_id}/eta:
+    patch:
+      tags: [Events]
+      operationId: updateEventETA
+      parameters: [{$ref: '#/components/parameters/EventId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lock_version, reason]
+              properties:
+                expected_end_at: {type: [string, 'null'], format: date-time}
+                lock_version: {type: integer, minimum: 0}
+                reason: {type: string, minLength: 3}
+      responses:
+        '202':
+          description: Event revision and new forecast job
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OperationalEventReceipt'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /events/{event_id}/restart:
+    post:
+      tags: [Events]
+      operationId: closeEventOnRestart
+      parameters: [{$ref: '#/components/parameters/EventId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actual_end_at, lock_version]
+              properties:
+                actual_end_at: {type: string, format: date-time}
+                lock_version: {type: integer, minimum: 0}
+                reason: {type: string}
+      responses:
+        '202':
+          description: Restart recorded + reforecast enqueued
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OperationalEventReceipt'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /comparisons/actual-target:
+    get:
+      tags: [KPIs]
+      operationId: listActualVsTarget
+      parameters:
+        - {in: query, name: period, required: true, schema: {type: string, pattern: '^\d{4}-\d{2}$'}}
+        - {in: query, name: product_code, schema: {type: string}}
+      responses:
+        '200':
+          description: Comparable period/scope values
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/KpiResult'}
+  /kpis:
+    get:
+      tags: [KPIs]
+      operationId: listKpis
+      parameters:
+        - {in: query, name: period, required: true, schema: {type: string, pattern: '^\d{4}-\d{2}$'}}
+        - {in: query, name: product_code, schema: {type: string}}
+        - {in: query, name: unit_id, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: KPI values with approved scopes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/KpiResult'}
+  /forecasts:
+    post:
+      tags: [Forecasts]
+      operationId: requestForecast
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ForecastRequest'}
+      responses:
+        '202':
+          description: Forecast job accepted; may return AI_NOT_READY
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AsyncJob'}
+        '422': {$ref: '#/components/responses/Invalid'}
+  /forecasts/{run_id}:
+    get:
+      tags: [Forecasts]
+      operationId: getForecastRun
+      parameters: [{$ref: '#/components/parameters/RunId'}]
+      responses:
+        '200':
+          description: Immutable stored forecast run
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ForecastRun'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /forecasts/{run_id}/impact:
+    get:
+      tags: [Forecasts]
+      operationId: getForecastImpact
+      parameters: [{$ref: '#/components/parameters/RunId'}]
+      responses:
+        '200':
+          description: Comparable prior/current runs or marked incomparable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ForecastImpact'}
+  /datasets/upload:
+    post:
+      tags: [DatasetManagement]
+      operationId: uploadTrainingDataset
+      summary: Stage CSV/XLSX data for mapping; no automatic training or approval
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, granularity]
+              properties:
+                file: {type: string, format: binary}
+                granularity: {type: string, enum: [monthly, daily, shift]}
+                product_code: {type: string}
+                notes: {type: string}
+      responses:
+        '202':
+          description: Dataset stored immutably, queued for parsing and profiling
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AsyncJob'}
+        '422': {$ref: '#/components/responses/Invalid'}
+  /datasets/{dataset_id}/quality:
+    get:
+      tags: [DatasetManagement]
+      operationId: getDatasetQuality
+      parameters: [{$ref: '#/components/parameters/DatasetId'}]
+      responses:
+        '200':
+          description: Mapping, coverage, provenance and chronological readiness report
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DatasetQuality'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /datasets/{dataset_id}/approve:
+    post:
+      tags: [DatasetManagement]
+      operationId: approveDatasetSnapshot
+      parameters: [{$ref: '#/components/parameters/DatasetId'}]
+      responses:
+        '200':
+          description: Frozen approved source snapshot; no claim that ML is deployable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DatasetQuality'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /training-runs:
+    post:
+      tags: [Training]
+      operationId: queueTrainingRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/TrainingRunRequest'}
+      responses:
+        '202':
+          description: Candidate training/validation queued; result not approved for production
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AsyncJob'}
+        '422': {$ref: '#/components/responses/Invalid'}
+  /training-runs/{training_run_id}:
+    get:
+      tags: [Training]
+      operationId: getTrainingRun
+      parameters: [{$ref: '#/components/parameters/TrainingRunId'}]
+      responses:
+        '200':
+          description: Training run state, failure reason, metrics and artifact linkage
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TrainingRunStatus'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /models:
+    get:
+      tags: [ModelGovernance]
+      operationId: listModelVersions
+      responses:
+        '200':
+          description: Model registry metadata only; no model bytes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/ModelVersion'}
+  /models/retrain:
+    post:
+      tags: [ModelGovernance]
+      operationId: requestModelRetrain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_code, snapshot_id]
+              properties:
+                product_code: {type: string}
+                snapshot_id: {type: string, format: uuid}
+                reason: {type: string}
+      responses:
+        '202':
+          description: Training job, not deployed model
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AsyncJob'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /models/{model_id}/promote:
+    post:
+      tags: [ModelGovernance]
+      operationId: promoteModel
+      parameters: [{$ref: '#/components/parameters/ModelId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [review_id, reason]
+              properties:
+                review_id: {type: string, format: uuid}
+                reason: {type: string, minLength: 3}
+      responses:
+        '200':
+          description: New champion is active and old version archived
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ModelVersion'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /jobs/{job_id}:
+    get:
+      tags: [Jobs]
+      operationId: getAsyncJob
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses:
+        '200':
+          description: Job state
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AsyncJob'}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    PlanId: {in: path, name: plan_id, required: true, schema: {type: string, format: uuid}}
+    RecordId: {in: path, name: record_id, required: true, schema: {type: string, format: uuid}}
+    BatchId: {in: path, name: batch_id, required: true, schema: {type: string, format: uuid}}
+    EventId: {in: path, name: event_id, required: true, schema: {type: string, format: uuid}}
+    RunId: {in: path, name: run_id, required: true, schema: {type: string, format: uuid}}
+    ModelId: {in: path, name: model_id, required: true, schema: {type: string, format: uuid}}
+    DatasetId: {in: path, name: dataset_id, required: true, schema: {type: string, format: uuid}}
+    TrainingRunId: {in: path, name: training_run_id, required: true, schema: {type: string, format: uuid}}
+    JobId: {in: path, name: job_id, required: true, schema: {type: string, format: uuid}}
+  responses:
+    Unauthorized:
+      description: Sign-in required
+      content: {application/json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    Forbidden:
+      description: Permission denied
+      content: {application/json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    Conflict:
+      description: Conflicting revision or invalid state transition
+      content: {application/json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    Invalid:
+      description: Validation failed
+      content: {application/json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    NotFound:
+      description: Resource missing
+      content: {application/json: {schema: {$ref: '#/components/schemas/Problem'}}}
+  schemas:
+    DatasetQuality:
+      type: object
+      required: [dataset_id, granularity, row_count, readiness_status]
+      properties:
+        dataset_id: {type: string, format: uuid}
+        granularity: {type: string, enum: [monthly, daily, shift]}
+        row_count: {type: integer, minimum: 0}
+        missing_values: {type: object, additionalProperties: {type: integer}}
+        coverage_start: {type: [string, 'null'], format: date}
+        coverage_end: {type: [string, 'null'], format: date}
+        readiness_status: {type: string, enum: [uploaded, needs_mapping, needs_review, approved, insufficient_for_ml]}
+        can_train_candidates: {type: boolean}
+        can_promote_model: {type: boolean}
+        warnings: {type: array, items: {type: string}}
+    TrainingRunRequest:
+      type: object
+      required: [dataset_snapshot_id, product_code, granularity, prediction_horizon, model_family]
+      properties:
+        dataset_snapshot_id: {type: string, format: uuid}
+        product_code: {type: string}
+        granularity: {type: string, enum: [monthly, daily, shift]}
+        prediction_horizon: {type: string}
+        model_family: {type: string, enum: [naive, seasonal_naive, yield_baseline, random_forest, xgboost]}
+        hyperparameters: {type: object, additionalProperties: true}
+    TrainingRunStatus:
+      type: object
+      required: [id, status, granularity, model_family]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [queued, running, completed, failed, rejected]}
+        granularity: {type: string, enum: [monthly, daily, shift]}
+        model_family: {type: string}
+        metrics: {type: object, additionalProperties: true}
+        model_version_id: {type: [string, 'null'], format: uuid}
+        rejection_reason: {type: [string, 'null']}
+    Problem:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object, additionalProperties: true}
+            request_id: {type: string}
+    UserProfile:
+      type: object
+      required: [id, display_name, permissions]
+      properties:
+        id: {type: string, format: uuid}
+        display_name: {type: string}
+        permissions: {type: array, items: {type: string}}
+        facility_ids: {type: array, items: {type: string, format: uuid}}
+    RefineryUnit:
+      type: object
+      required: [id, code, name_ar]
+      properties:
+        id: {type: string, format: uuid}
+        code: {type: string}
+        name_ar: {type: string}
+        status: {type: string}
+    Product:
+      type: object
+      required: [id, code, name_ar, stage]
+      properties:
+        id: {type: string, format: uuid}
+        code: {type: string}
+        name_ar: {type: string}
+        stage: {type: string, enum: [intermediate_stream, final_product, blend_additive, fuel, byproduct, waste, other]}
+        standard_unit: {type: string, example: t}
+    TargetItem:
+      type: object
+      required: [product_code, period_start, period_end, target_t]
+      properties:
+        product_code: {type: string}
+        unit_id: {type: [string, 'null'], format: uuid}
+        period_start: {type: string, format: date}
+        period_end: {type: string, format: date}
+        target_t: {type: number, minimum: 0}
+    CreateTargetPlan:
+      type: object
+      required: [facility_id, valid_from, valid_to, targets]
+      properties:
+        facility_id: {type: string, format: uuid}
+        title: {type: string}
+        valid_from: {type: string, format: date}
+        valid_to: {type: string, format: date}
+        targets: {type: array, items: {$ref: '#/components/schemas/TargetItem'}}
+    TargetPlan:
+      allOf:
+        - {$ref: '#/components/schemas/CreateTargetPlan'}
+        - type: object
+          required: [id, version_no, status]
+          properties:
+            id: {type: string, format: uuid}
+            version_no: {type: integer, minimum: 1}
+            status: {type: string, enum: [draft, submitted, approved, rejected, superseded]}
+            known_at: {type: [string, 'null'], format: date-time}
+    CreateProductionRecord:
+      type: object
+      required: [unit_id, product_code, business_date, quantity_t, measurement_stage, available_at]
+      properties:
+        unit_id: {type: string, format: uuid}
+        product_code: {type: string}
+        business_date: {type: string, format: date}
+        shift_code: {type: [string, 'null']}
+        quantity_t: {type: number, minimum: 0}
+        measurement_stage: {type: string}
+        observed_at: {type: [string, 'null'], format: date-time}
+        available_at: {type: string, format: date-time}
+        source_file_id: {type: [string, 'null'], format: uuid}
+        source_reference: {type: [string, 'null']}
+    ProductionRecord:
+      allOf:
+        - {$ref: '#/components/schemas/CreateProductionRecord'}
+        - type: object
+          required: [id, status, revision_no]
+          properties:
+            id: {type: string, format: uuid}
+            status: {type: string, enum: [draft, submitted, approved, rejected, superseded]}
+            revision_no: {type: integer, minimum: 1}
+            lock_version: {type: integer, minimum: 0}
+    ImportBatch:
+      type: object
+      required: [id, status]
+      properties:
+        id: {type: string, format: uuid}
+        source_file_id: {type: string, format: uuid}
+        status: {type: string}
+        uploaded_rows: {type: integer, minimum: 0}
+        rejected_rows: {type: integer, minimum: 0}
+        unknown_mapping_count: {type: integer, minimum: 0}
+        errors: {type: array, items: {type: string}}
+    CreateEvent:
+      type: object
+      required: [unit_id, kind, type, started_at, source, idempotency_key]
+      properties:
+        unit_id: {type: string, format: uuid}
+        kind: {type: string, enum: [planned, unplanned]}
+        type: {type: string, enum: [trip, planned_shutdown, startup, restart, feed_reduction, power_failure, utility_failure, maintenance]}
+        started_at: {type: string, format: date-time}
+        expected_end_at: {type: [string, 'null'], format: date-time}
+        idempotency_key: {type: string, minLength: 8}
+        source: {type: string, enum: [manual, imported, readonly_sensor]}
+        notes: {type: string}
+    OperationalEvent:
+      allOf:
+        - {$ref: '#/components/schemas/CreateEvent'}
+        - type: object
+          required: [id, status, revision_no, known_at]
+          properties:
+            id: {type: string, format: uuid}
+            status: {type: string, enum: [reported, acknowledged, investigating, resolved, closed, cancelled]}
+            revision_no: {type: integer, minimum: 1}
+            known_at: {type: string, format: date-time}
+            actual_end_at: {type: [string, 'null'], format: date-time}
+            lock_version: {type: integer, minimum: 0}
+    OperationalEventReceipt:
+      type: object
+      required: [event_id, event_status, forecast_status]
+      properties:
+        event_id: {type: string, format: uuid}
+        event_status: {type: string}
+        forecast_status: {type: string, enum: [queued, not_ready, unavailable]}
+        reforecast_job_id: {type: [string, 'null'], format: uuid}
+    KpiResult:
+      type: object
+      required: [code, scope, status, calculation_version]
+      properties:
+        code: {type: string}
+        scope: {type: object, additionalProperties: true}
+        numerator: {type: [number, 'null']}
+        denominator: {type: [number, 'null']}
+        value: {type: [number, 'null']}
+        value_unit: {type: string}
+        status: {type: string, enum: [valid, not_applicable, incomplete, unapproved, needs_reconciliation]}
+        calculation_version: {type: string}
+        source_status: {type: string}
+    ForecastRequest:
+      type: object
+      required: [as_of, product_codes, horizon, target_plan_version_id, reason]
+      properties:
+        as_of: {type: string, format: date-time}
+        product_codes: {type: array, minItems: 1, items: {type: string}}
+        horizon: {type: string, enum: [next_day, next_7_days, month_end]}
+        target_plan_version_id: {type: string, format: uuid}
+        reason: {type: string, enum: [scheduled, new_data, event_changed, manual_review]}
+        event_id: {type: [string, 'null'], format: uuid}
+        scenario_inputs: {type: object, additionalProperties: true}
+    ForecastPoint:
+      type: object
+      required: [product_code, forecast_date, source_status]
+      properties:
+        product_code: {type: string}
+        forecast_date: {type: string, format: date}
+        forecast_t: {type: [number, 'null'], minimum: 0}
+        lower_t: {type: [number, 'null'], minimum: 0}
+        upper_t: {type: [number, 'null'], minimum: 0}
+        source_status: {type: string, enum: [model, scenario_estimate, not_ready]}
+    ForecastRun:
+      type: object
+      required: [id, as_of, horizon, status, quality_status]
+      properties:
+        id: {type: string, format: uuid}
+        parent_run_id: {type: [string, 'null'], format: uuid}
+        event_id: {type: [string, 'null'], format: uuid}
+        model_version_id: {type: [string, 'null'], format: uuid}
+        engine_type: {type: string, enum: [ml_model, statistical_baseline, engineering_baseline, scenario_estimate, unavailable]}
+        as_of: {type: string, format: date-time}
+        horizon: {type: string}
+        status: {type: string, enum: [queued, running, completed, failed, unavailable, superseded]}
+        quality_status: {type: string}
+        points: {type: array, items: {$ref: '#/components/schemas/ForecastPoint'}}
+        assumptions: {type: array, items: {type: string}}
+    ForecastImpact:
+      type: object
+      required: [before_run_id, after_run_id, comparison_status]
+      properties:
+        before_run_id: {type: string, format: uuid}
+        after_run_id: {type: string, format: uuid}
+        comparison_status: {type: string, enum: [comparable, different_horizon, different_target_version, insufficient_data]}
+        delta_t: {type: [number, 'null']}
+        note: {type: string}
+    ModelVersion:
+      type: object
+      required: [id, product_code, version_code, granularity, prediction_horizon, model_family, status]
+      properties:
+        id: {type: string, format: uuid}
+        product_code: {type: string}
+        version_code: {type: string}
+        granularity: {type: string, enum: [monthly, daily, shift]}
+        prediction_horizon: {type: string}
+        model_family: {type: string}
+        status: {type: string, enum: [trained, evaluated, candidate, approved, active, archived, rejected]}
+        metrics: {type: object, additionalProperties: true}
+        trained_at: {type: string, format: date-time}
+    AsyncJob:
+      type: object
+      required: [id, status, kind]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [queued, running, completed, failed, cancelled]}
+        kind: {type: string}
+        resource_id: {type: [string, 'null'], format: uuid}
+        error_code: {type: [string, 'null']}
+        created_at: {type: string, format: date-time}
+    Pagination:
+      type: object
+      required: [page, per_page, total]
+      properties:
+        page: {type: integer, minimum: 1}
+        per_page: {type: integer, minimum: 1}
+        total: {type: integer, minimum: 0}

@@ -1,0 +1,5 @@
+business_date,unit_code,product_code,facility_timezone,as_of,data_origin,crude_feed_lag1_t,product_production_lag1_t,product_production_lag7_t,product_rolling7_t,known_planned_shutdown_hours,last_known_unit_status,recent_unplanned_downtime_hours,known_approved_target_t,product_production_t,label_status,source_lineage_id
+2025-01-10,EXAMPLE_CDU,DIESEL,Africa/Tripoli,2025-01-09T20:00:00Z,synthetic_demo,14400,3550,3480,3510,0,running,0,3800,3600,approved,SYNTHETIC-001
+2025-01-11,EXAMPLE_CDU,DIESEL,Africa/Tripoli,2025-01-10T20:00:00Z,synthetic_demo,14500,3600,3510,3530,0,running,0,3800,3650,approved,SYNTHETIC-002
+2025-01-12,EXAMPLE_CDU,DIESEL,Africa/Tripoli,2025-01-11T20:00:00Z,synthetic_demo,14800,3650,3520,3560,8,maintenance,0,3800,2400,approved,SYNTHETIC-003
+2025-01-13,EXAMPLE_CDU,DIESEL,Africa/Tripoli,2025-01-12T20:00:00Z,synthetic_demo,9700,2400,3600,3500,0,trip,12,3800,900,approved,SYNTHETIC-004

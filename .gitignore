@@ -1,0 +1,37 @@
+.env
+
+# Local execution state and confidential evidence (never publish)
+.worktrees/
+.superpowers/
+.local/
+/data/curated-provisional/
+/data/audits/
+/data/source-mapping/
+/services/ai/research_starter/data/
+/services/ai/research_starter/results/
+*.sqlite
+*.sqlite-*
+*.joblib
+*.pem
+*.key
+*.tsbuildinfo
+.env.*
+!.env.example
+__pycache__/
+.pytest_cache/
+.venv/
+node_modules/
+vendor/
+dist/
+coverage/
+*.log
+model_artifacts/
+secrets/
+raw_sources/
+.DS_Store
+
+# Confidential refinery raw material (locally bundled only for offline analysis)
+/data/raw-sources/*
+!/data/raw-sources/README.md
+/services/ai/research_starter/results/*RESEARCH_ONLY.joblib
+.env
