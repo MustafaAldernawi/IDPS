@@ -10,10 +10,13 @@
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "run-s \"lint:*\"",
-    "lint:oxlint": "oxlint . --fix",
-    "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "lint": "run-s lint:oxlint lint:eslint",
+    "lint:oxlint": "oxlint .",
+    "lint:eslint": "eslint .",
+    "format": "prettier --write --experimental-cli src/",
+    "test:run": "vitest run",
+    "lint:fix": "oxlint . --fix && eslint . --fix",
+    "check": "npm run lint && npm run test:run && npm run build"
   },
   "dependencies": {
     "pinia": "^4.0.3",
@@ -51,6 +54,8 @@
   },
   "overrides": {
     "@typescript-eslint/parser": "8.72.1",
-    "@typescript-eslint/eslint-plugin": "8.72.1"
+    "@typescript-eslint/eslint-plugin": "8.72.1",
+    "minimatch": "^11.0.5",
+    "glob": "^14.0.4"
   }
 }

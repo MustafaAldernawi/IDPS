@@ -1,0 +1,38 @@
+name: IDPS validation
+on: [push, pull_request]
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-password
+          MYSQL_DATABASE: idps_test
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -pci-only-password" --health-interval=10s --health-timeout=5s --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - run: composer install --no-interaction --prefer-dist
+        working-directory: apps/backend
+      - run: cp .env.example .env.testing && php artisan key:generate --env=testing
+        working-directory: apps/backend
+      - run: php vendor/bin/phpunit --do-not-cache-result
+        working-directory: apps/backend
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: idps_test
+          DB_USERNAME: root
+          DB_PASSWORD: ci-only-password
+      - run: npm ci --ignore-scripts && npm run build && npm run test:unit -- --run
+        working-directory: apps/frontend

@@ -4,7 +4,7 @@
 
 ## Track A — Foundation
 
-- [ ] RF-001 — Repository & runtime conventions (Laravel / Vue / Python / MySQL 8.4).
+- [x] RF-001 — Repository & runtime conventions (Laravel / Vue / Python / MySQL 8.4). Local builds, MySQL precision/timezone test, dependency audit and minimal CI configuration verified; remote CI not run. Evidence: `docs/PROGRESS.md`.
 - [ ] RF-002 — Authentication + policy.
 - [ ] RF-003 — Roles and unit-scoped RBAC.
 - [ ] RF-004 — Approval & immutable audit trail.
