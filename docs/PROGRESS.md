@@ -91,3 +91,8 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Health endpoint now reports the training code hash captured at service startup; startup script checks it against the current local file and rejects stale/unknown AI listeners before starting workers. Python tests 15 passed. Confirmed prior listener stale, safely stopped the specific IDPS process started in the earlier session after PID/command/log verification; restarted managed worker/scheduler with current AI health. PowerShell 7 requirement documented.
 - Next: run full backend suite including E2E (previous full suite30/206 preceded new E2E), inspect readiness matrix for remaining gaps, real approved-data retraining after engineering approval, and combined DB/files recovery consistency. V1 still incomplete.
 - Full backend regression after E2E integration: `php vendor/bin/phpunit --do-not-cache-result` passed 31 tests /243 assertions on dedicated MySQL test schema.
+
+## Restore consistency drill — 2026-11-10
+
+- `scripts/local-verify-restore.ps1` cross-checked isolated MySQL and isolated file restore: 12/12 actual source hashes matched. No model rows existed in that backup; an isolated synthetic model/artifact/approval fixture then verified 1/1. Empty restore directory negative tests correctly detected missing sources and model and returned failure.
+- Restored database paths still refer to original storage paths; the checker does not rewrite them. A usable alternate environment requires explicit, controlled path mapping and a quiesced consistent backup pair. No original files or existing databases deleted.

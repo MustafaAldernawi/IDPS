@@ -55,3 +55,4 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 - [x] Protected file/artifact backup and isolated SHA256 restore check (19 files); DB/file consistency drill remains open. See docs/PROGRESS.md Batch 4.
 - [x] Arabic reference interfaces for shifts/calendar/unit status/quality, with 8 frontend tests and build; owner UAT remains pending.
 - [x] Synthetic MySQL end-to-end workflow: 1 test /37 assertions; AI boundary mocked not_ready. Real approved-data UAT remains pending.
+- [x] Isolated DB/files restore consistency checks: 12 real source hashes and one synthetic model artifact, plus missing-file negative tests; alternate-environment path mapping remains pending.
