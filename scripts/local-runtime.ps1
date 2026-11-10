@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 param([ValidateSet('start','status','stop')][string]$Action='start')
 $ErrorActionPreference='Stop'
 $root=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -52,6 +53,12 @@ try{
  $env:IDPS_AI_ARTIFACT_DIR=Join-Path $root '.local/ai-artifacts'
  if(-not(Port-Listening 8001)){Start-Managed 'ai' $python @('-B','-m','uvicorn','app.main:app','--host','127.0.0.1','--port','8001') $ai}else{Write-Output 'AI port occupied; verify existing listener and health.'}
 }finally{$env:IDPS_AI_SERVICE_KEY=$previousKey;$env:IDPS_AI_ARTIFACT_DIR=$previousArtifacts}
+$expectedAiHash=(Get-FileHash -LiteralPath (Join-Path $ai 'app/training.py') -Algorithm SHA256).Hash.ToLowerInvariant()
+$aiHealth=$null
+for($attempt=0;$attempt -lt 20 -and -not $aiHealth;$attempt++){
+ try{$aiHealth=Invoke-RestMethod -Uri 'http://127.0.0.1:8001/health' -TimeoutSec 2}catch{Start-Sleep -Seconds 1}
+}
+if(-not $aiHealth -or $aiHealth.service -ne 'idps-ai' -or $aiHealth.training_code_sha256 -ne $expectedAiHash){throw 'AI listener is unavailable or runs a different code version. Inspect the listener; restart it only if it belongs to IDPS.'}
 if(-not(Port-Listening 8000)){Start-Managed 'backend' $php @('-S','127.0.0.1:8000','-t','public') $backend}else{Write-Output 'Backend port occupied; verify existing listener and health.'}
 if(-not(Port-Listening 5173)){Start-Managed 'frontend' $node @('node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5173','--strictPort') $frontend}else{Write-Output 'Frontend port occupied; verify existing listener and health.'}
 Start-Managed 'queue' $php @('artisan','queue:work','database','--sleep=2','--tries=3','--timeout=240','--no-interaction') $backend

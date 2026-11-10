@@ -38,7 +38,9 @@ def client(tmp_path, monkeypatch):
 
 
 def test_auth_fails_closed(client, monkeypatch):
-    assert client.get("/health").status_code == 200
+    health = client.get("/health")
+    assert health.status_code == 200
+    assert health.json()['training_code_sha256'] == hashlib.sha256((Path(__file__).resolve().parents[1] / 'app' / 'training.py').read_bytes()).hexdigest()
     assert client.post("/internal/train", json=payload(), headers={"X-IDPS-Service-Key": "bad"}).status_code == 401
     monkeypatch.delenv("IDPS_AI_SERVICE_KEY")
     assert client.post("/internal/train", json=payload()).status_code == 503

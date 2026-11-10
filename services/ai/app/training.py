@@ -21,6 +21,7 @@ from xgboost import XGBRegressor
 
 FEATURE_SCHEMA = "monthly_previous_product_mean3_calendar_v1"
 FEATURES = ["lag_1_t", "mean_previous_3_t", "month_sin", "month_cos"]
+TRAINING_CODE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 METHODS = ["last_month", "mean3", "seasonal12", "ridge", "random_forest", "xgboost"]
 
 

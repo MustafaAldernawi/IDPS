@@ -13,7 +13,7 @@ from typing import Literal
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .training import FEATURE_SCHEMA, build_examples, canonical_bytes, canonical_sha, cutoff, month_number, predict_json, timestamp, train, write_once
+from .training import FEATURE_SCHEMA, TRAINING_CODE_SHA256, build_examples, canonical_bytes, canonical_sha, cutoff, month_number, predict_json, timestamp, train, write_once
 
 app = FastAPI(title="IDPS private monthly AI worker", version="1.0.0", docs_url=None, redoc_url=None)
 
@@ -115,7 +115,7 @@ def load_artifact(reference):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "idps-ai", "scope": "monthly", "configured": bool(os.environ.get("IDPS_AI_SERVICE_KEY"))}
+    return {"status": "ok", "service": "idps-ai", "scope": "monthly", "configured": bool(os.environ.get("IDPS_AI_SERVICE_KEY")), "training_code_sha256": TRAINING_CODE_SHA256}
 
 
 @app.post("/internal/train", dependencies=[Depends(authorized)])
