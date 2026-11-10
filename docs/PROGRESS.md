@@ -67,3 +67,14 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Local runtime start/status/stop checked; stops only processes launched by its own script. MySQL DPAPI-encrypted backup restored to isolated `idps_restore_528f3a49b20446d6`: 50 tables, 1008 monthly facts, zero orphan source references. Restore database retained. Backup does not yet include original files, attachments or model artifacts.
 - Remaining: full protected backup of files/artifacts; frontend for new references, time-safe retrospective UI, full E2E/UAT, owner approval, evaluation of all partially implemented/missing tickets. No source facts or models approved.
 - Next: inspect readiness matrix and add frontend workflows for reference APIs; exercise cross-service retrospective training, then continue remaining gaps. Use MySQL test schema only for automated tests.
+
+## Research integration smoke — 2026-11-10
+
+- Authenticated Laravel API created/reused a DIESEL research snapshot from the staged 2021–2023 monthly facts. A queued run was retried through a dedicated loopback FastAPI worker using the updated code. Result: `completed`, `availability_policy=retrospective_unknown_not_point_in_time`, `can_deploy=false`; no timestamps fabricated. This is research evidence, not an approved operational accuracy claim.
+- The first automatic attempt reached an older still-running worker and was recorded as `AI_WORKER_FAILED`; the explicit retry succeeded with the new service. Unified startup must ensure processes actually run the current release. Do not silently report old process code as updated.
+
+## Batch 4 — protected files backup and actual research run
+
+- Actual local DIESEL research candidate completed via Laravel and loopback Python worker, tagged `retrospective_unknown_not_point_in_time`, `can_deploy=false`. The first retry hit an old service process, then succeeded with the new worker; restart/replace only service processes owned by IDPS startup.
+- Added DPAPI-protected backup of raw sources, private attachments and local AI artifacts with per-file SHA256 and source-change detection; isolated restore verified 19/19 hashes without altering originals. Database and file backup are separate: quiesce writes and cross-check references before relying on a combined restore; DPAPI depends on the Windows account and excludes credentials.
+- Next: independently check frontend reference workflow and run npm suite, then exercise combined database/file recovery and remaining RF gaps. Keep owner UAT and engineering signoff pending.

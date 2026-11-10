@@ -51,3 +51,5 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 
 - [x] Retrospective research assumptions, reference APIs, local runtime and isolated MySQL restore software checks. See docs/PROGRESS.md Batch 3.
 - [ ] Complete file/artifact backup, reference user interfaces, full E2E, domain approvals and UAT; see docs/V1_READINESS_MATRIX.md.
+- [x] Local retrospective DIESEL research run through Laravel/Python completed with explicit availability assumption and deploy blocked; see docs/PROGRESS.md.
+- [x] Protected file/artifact backup and isolated SHA256 restore check (19 files); DB/file consistency drill remains open. See docs/PROGRESS.md Batch 4.
