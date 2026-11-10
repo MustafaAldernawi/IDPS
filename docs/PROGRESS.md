@@ -78,3 +78,9 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Actual local DIESEL research candidate completed via Laravel and loopback Python worker, tagged `retrospective_unknown_not_point_in_time`, `can_deploy=false`. The first retry hit an old service process, then succeeded with the new worker; restart/replace only service processes owned by IDPS startup.
 - Added DPAPI-protected backup of raw sources, private attachments and local AI artifacts with per-file SHA256 and source-change detection; isolated restore verified 19/19 hashes without altering originals. Database and file backup are separate: quiesce writes and cross-check references before relying on a combined restore; DPAPI depends on the Windows account and excludes credentials.
 - Next: independently check frontend reference workflow and run npm suite, then exercise combined database/file recovery and remaining RF gaps. Keep owner UAT and engineering signoff pending.
+
+## Batch 5 — reference interfaces
+
+- Added Arabic RTL workflows for shift definitions, operating calendar, unit state intervals, quality specifications and approvals, conformance and downtime; permissions, missing data and pending approvals are visible. Training Studio explicitly warns that unknown historical availability makes retrospective research an assumption, never a promotable model.
+- `npm run check`: lint, 8 tests, TypeScript and Vite build passed; `npm audit --omit=dev` reported zero vulnerabilities. No refinery UAT or engineering signoff is implied.
+- Next: full end-to-end workflow with real local queue and isolated fixtures; close data mapping, monitoring/retraining, full recovery consistency and security gaps documented in `docs/V1_READINESS_MATRIX.md`.

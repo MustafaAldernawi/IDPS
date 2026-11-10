@@ -9,6 +9,7 @@ import TrainingStudio from './components/TrainingStudio.vue'
 import AdminView from './components/AdminView.vue'
 import ReportsView from './components/ReportsView.vue'
 import DefinitionsView from './components/DefinitionsView.vue'
+import ReferencesView from './components/ReferencesView.vue'
 import './style.css'
 
 const token = ref<string | null>(null), user = ref<User | null>(null), email = ref(''), password = ref(''), error = ref(''), busy = ref(false), active = ref('overview'), menuOpen = ref(false)
@@ -22,12 +23,14 @@ const navigation = [
   { key: 'reports', title: 'التقارير والتصدير', subtitle: 'تقارير شهرية مرتبطة بالمصدر والفترة وحالة الاعتماد', group: 'البيانات والحوكمة', icon: '▧' },
   { key: 'admin', title: 'المستخدمون والمرجعيات', subtitle: 'إدارة الحسابات والأدوار ونطاق المرافق والوحدات', group: 'البيانات والحوكمة', icon: '⚙' },
   { key: 'definitions', title: 'تعريف المؤشرات', subtitle: 'نطاقات ومعاملات موثقة بإصدارات واعتماد مستقل', group: 'هندسة العمليات', icon: '∑' },
+  { key: 'references', title: 'الورديات والحالة والجودة', subtitle: 'تقويم العمل وحالة الوحدات ومواصفات الجودة المعتمدة', group: 'العمليات والتخطيط', icon: '◷' },
 ]
 const groups = ['الرئيسية', 'العمليات والتخطيط', 'هندسة العمليات', 'البيانات والحوكمة', 'الذكاء الاصطناعي']
 provide('permissions', computed(() => user.value?.permissions ?? []))
 const permissionMap: Record<string, string[]> = { overview: ['engineering.read'], engineering: ['engineering.read'], production: ['production.write', 'production.read', 'engineering.read'], feed: ['production.write', 'production.read', 'engineering.read'], energy: ['production.write', 'engineering.read'], losses: ['production.write', 'engineering.read'], chemicals: ['production.write', 'engineering.read'], planning: ['planning.write', 'planning.read', 'engineering.read'], events: ['events.write', 'events.read', 'events.approve', 'engineering.read'], quality: ['quality.write', 'quality.read', 'engineering.read'], blending: ['quality.write', 'quality.read', 'engineering.read'], monthly: ['production.read'], audit: ['audit.read'], imports: ['imports.read', 'imports.write', 'imports.approve'], ai: ['ai.read', 'dataset.read', 'ai.train'], reports: ['reports.export'], admin: ['users.manage', 'catalogs.manage'] }
 permissionMap.definitions = ['engineering.read', 'production.approve', 'planning.approve']
 permissionMap.annotations = ['engineering.read', 'production.approve']
+permissionMap.references = ['catalogs.read', 'quality.read', 'production.read', 'engineering.read']
 const visibleNavigation = computed(() => navigation.filter(item => user.value?.permissions.includes('*') || permissionMap[item.key]?.some(permission => user.value?.permissions.includes(permission))))
 const current = computed(() => navigation.find(item => item.key === active.value) ?? navigation[0]!)
 const resource = computed(() => resources.find(item => item.key === active.value))
@@ -63,6 +66,7 @@ function navigate(key: string) { active.value = key; menuOpen.value = false }
         <AdminView v-else-if="active === 'admin'" :api="api" />
         <ReportsView v-else-if="active === 'reports'" :api="api" />
         <DefinitionsView v-else-if="active === 'definitions'" :api="api" />
+        <ReferencesView v-else-if="active === 'references'" :api="api" />
         <ResourceView v-else-if="resource" :resource="resource" :api="api" />
       </main><footer class="workspace-footer"><span>IDPS — Integrated Data and Production System</span><span>مصفاة الزاوية · Africa/Tripoli</span></footer>
     </div>
