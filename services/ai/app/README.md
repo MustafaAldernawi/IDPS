@@ -13,7 +13,7 @@ fails closed with 503; incorrect credentials return 401. `/health` contains no d
 
 `POST /internal/train`: `{snapshot_id,dataset_sha256,product_code,seed,mode,rows}`.
 `mode` is `approved` or `research_only`. Each row has `period_month` (`YYYY-MM`),
-`quantity` (decimal string), `available_at` (UTC ISO timestamp), `approved_at` (UTC
+`quantity` (decimal string), `available_at` (UTC ISO timestamp or null), `approved_at` (UTC
 ISO timestamp or null), and `status` (`approved` or `provisional`). Supply all row
 keys, including null approval timestamps. Rows must be sorted by month and unique.
 
@@ -33,6 +33,13 @@ the same validation/test dates. Features need three actual contiguous previous m
 seasonal comparison additionally requires the same month in the previous year.
 Late availability/approval excludes historical features. Unknown historical availability
 must never be backdated just to make training eligible.
+
+For `research_only`, provisional rows with unknown availability may be used in a
+retrospective chronological experiment under an explicit assumption that earlier
+monthly values were available. The result says `retrospective_unknown_not_point_in_time`:
+it cannot establish historical point-in-time validity or be promoted. Known late
+availability is still respected. Operational training requires real availability
+and approval timestamps, with no substitution or invented dates.
 
 Models fit against train+validation for holdout assessment; no test refit occurs.
 Selection uses validation only. Negative predictions are counted rather than silently

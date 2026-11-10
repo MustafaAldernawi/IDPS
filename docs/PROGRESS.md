@@ -51,3 +51,19 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Added durable outbox consumer command `php artisan idps:process-outbox` scheduled every minute; queue worker handles immutable event revisions and retry idempotency. Event-adjusted quantities remain unavailable without signed assumptions.
 - Remaining: final integrated backend checks/review, reference catalogs/calendar/unit timeline, automated local start/backup+restore drill, scope completeness/UAT matrix. V1 is NOT declared complete.
 - Final checkpoint backend run GREEN:27 tests /187 assertions on real MySQL;40 API routes registered. Includes governance, imports, operations/engineering/report outputs, AI activation/retry and reforecast suites. Local owner UAT and completeness gates remain open.
+
+## Batch 3 in progress — retrospective research and readiness
+
+- Starting point `31870c4`; no application recreation. Readiness matrix now covers all 119 RF tickets conservatively in `docs/V1_READINESS_MATRIX.md` and records pending engineering decisions separately.
+- Research-only training now accepts provisional monthly rows with unknown availability without inventing timestamps; chronological prior-month-only features, 2021/2022/2023 split, explicit `retrospective_unknown_not_point_in_time` warning and permanent promotion block. Known late availability remains excluded. Operational training continues to require actual availability and approval.
+- Python service/parser `python -B -m pytest -q -p no:cacheprovider services/ai/tests tests/test_monthly_parser.py`: 15 passed. Laravel integration test updated; real-MySQL run pending shared test database release.
+- Work underway: scoped quality/unit/shift reference APIs and unified runtime/backup. Do not treat unfinished concurrent files as completed. Next: run AI integration tests after idps_test is free, review these changes and update evidence/commit; then integrate reference module and runtime scripts with their tests.
+
+## Batch 3 — 2026-11-10: retrospective research, references, local recovery
+
+- `docs/V1_READINESS_MATRIX.md` covers 119 tickets; conservative evidence assessment, not UAT.
+- Research-only training accepts unknown availability without inventing dates: strictly prior monthly features and 2021/2022/2023 split, explicit unverified availability assumption and permanent promotion block; operational training still requires real availability/approval. Laravel integration 8 tests /48 assertions, Python service/parser 15 tests passed.
+- Added scoped shift/calendar/unit-status/quality-specification reference APIs and independent approval; quality conformance returns not_evaluated when missing approved evidence. MySQL migration 150000 applied to local development; access grants refreshed. Full backend suite: 30 tests /206 assertions passed on MySQL after routes added.
+- Local runtime start/status/stop checked; stops only processes launched by its own script. MySQL DPAPI-encrypted backup restored to isolated `idps_restore_528f3a49b20446d6`: 50 tables, 1008 monthly facts, zero orphan source references. Restore database retained. Backup does not yet include original files, attachments or model artifacts.
+- Remaining: full protected backup of files/artifacts; frontend for new references, time-safe retrospective UI, full E2E/UAT, owner approval, evaluation of all partially implemented/missing tickets. No source facts or models approved.
+- Next: inspect readiness matrix and add frontend workflows for reference APIs; exercise cross-service retrospective training, then continue remaining gaps. Use MySQL test schema only for automated tests.

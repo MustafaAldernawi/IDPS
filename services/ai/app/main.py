@@ -25,7 +25,7 @@ class Contract(BaseModel):
 class Row(Contract):
     period_month: str
     quantity: str
-    available_at: str
+    available_at: str | None
     approved_at: str | None = None
     status: Literal["approved", "provisional"]
 
@@ -100,7 +100,7 @@ def validate_rows(rows, mode, sha=None):
     if sha is not None and canonical_sha(rows) != sha: raise ValueError("dataset_hash_mismatch")
     periods = [row["period_month"] for row in rows]
     if periods != sorted(set(periods)): raise ValueError("duplicate_or_unsorted_months")
-    if mode == "approved" and any(row["status"] != "approved" or not row["approved_at"] for row in rows):
+    if mode == "approved" and any(row["status"] != "approved" or not row["approved_at"] or not row["available_at"] for row in rows):
         raise ValueError("unapproved_dataset")
 
 

@@ -108,6 +108,19 @@ def test_sparse_returns_not_ready_without_fabrication(client):
     assert result["can_deploy"] is False
     assert result["eligible_rows"] <= 5
 
+def test_retrospective_unknown_availability_is_explicit_and_never_promotable(client):
+    data = rows()
+    for row in data:
+        row.update(available_at=None, approved_at=None, status="provisional")
+    response = client.post('/internal/train', json=payload(data, mode='research_only'))
+    assert response.status_code == 200
+    result = response.json()
+    assert result['status'] == 'completed'
+    assert result['can_deploy'] is False
+    assert result['availability_policy'] == 'retrospective_unknown_not_point_in_time'
+    assert result['split']['test'] == ['2023-01','2023-12']
+    assert client.post('/internal/promote', json={'model_id':result['model_id'],'artifact_sha256':result['artifact_sha256'],'approval_reference':'test','approved_by':'reviewer'}).status_code == 409
+
 
 def test_late_approvals_block_historical_training_and_bad_utc_is_rejected(client):
     data = rows()

@@ -44,7 +44,7 @@ class TrainCandidate implements ShouldQueue
         try {
             $dataset = DB::table('dataset_snapshots')->where('id', $run->dataset_id)->first();
             $rows = json_decode($dataset->snapshot_json, true, 512, JSON_THROW_ON_ERROR);
-            if (collect($rows)->contains(fn ($row) => $row['available_at'] === null || $row['quantity'] === null)) {
+            if (collect($rows)->contains(fn ($row) => $row['quantity'] === null || ($dataset->mode !== 'research_only' && $row['available_at'] === null))) {
                 $result = ['status' => 'not_ready', 'reason' => 'missing_historical_availability_or_quantity', 'can_deploy' => false];
             } else {
                 if (! config('idps_ai.key')) {

@@ -175,10 +175,16 @@ class AiIntegrationTest extends TestCase
         $this->assertSame([$observation], json_decode($snapshot->source_observation_ids, true));
         $this->assertSame(hash('sha256', AiController::canonical($rows)), $snapshot->dataset_sha256);
         $run = $this->postJson('/api/v1/ai/training-runs', ['dataset_id' => $id])->assertAccepted()->json('data.id');
-        Http::fake();
+        Http::fake(['ai.test/*' => Http::response(['status' => 'not_ready', 'can_deploy' => false])]);
         (new TrainCandidate($run))->handle();
         Http::assertNothingSent();
-        $this->assertDatabaseHas('training_runs',['id' => $run, 'status' => 'not_ready']);
-        $this->assertSame($snapshot->snapshot_json,DB::table('dataset_snapshots')->where('id',$id)->value('snapshot_json'));
+        $this->assertDatabaseHas('training_runs', ['id' => $run, 'status' => 'not_ready']);
+        $this->assertSame($snapshot->snapshot_json, DB::table('dataset_snapshots')->where('id', $id)->value('snapshot_json'));
+        DB::table('monthly_observations')->where('id', $observation)->update(['status' => 'staged', 'approved_at' => null, 'approved_by' => null]);
+        $research = $this->postJson('/api/v1/ai/datasets', ['name' => 'Retrospective synthetic', 'product_code' => 'DIESEL', 'mode' => 'research_only'])->assertCreated()->json('data.id');
+        $researchRun = $this->postJson('/api/v1/ai/training-runs', ['dataset_id' => $research])->assertAccepted()->json('data.id');
+        config(['idps_ai.key' => 'test-service-key', 'idps_ai.url' => 'http://ai.test']);
+        (new TrainCandidate($researchRun))->handle();
+        Http::assertSent(fn ($request) => $request['mode'] === 'research_only' && $request['rows'][0]['available_at'] === null);
     }
 }

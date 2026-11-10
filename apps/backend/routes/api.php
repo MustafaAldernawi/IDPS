@@ -20,6 +20,11 @@ Route::prefix('v1')->group(function () {
         Route::get('catalogs/{catalog}', [CatalogController::class, 'index']);
         Route::post('catalogs/{catalog}', [CatalogController::class, 'store']);
         Route::get('audit-logs', [CatalogController::class, 'audit']);
+        Route::get('references/{kind}', [\App\Http\Controllers\DomainReferenceController::class, 'index']);
+        Route::post('references/{kind}', [\App\Http\Controllers\DomainReferenceController::class, 'store']);
+        Route::post('references/{kind}/{id}/approve', [\App\Http\Controllers\DomainReferenceController::class, 'approve']);
+        Route::get('quality-samples/{id}/conformance', [\App\Http\Controllers\DomainReferenceController::class, 'conformance']);
+        Route::get('unit-status/downtime', [\App\Http\Controllers\DomainReferenceController::class, 'downtime']);
         Route::get('users', [UserController::class, 'index']);
         Route::post('users', [UserController::class, 'store']);
         Route::post('users/{id}/roles', [UserController::class, 'assignRole']);

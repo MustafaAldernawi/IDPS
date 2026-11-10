@@ -70,6 +70,8 @@ def cutoff(period):
 
 
 def known(row, as_of, research=False):
+    if row["available_at"] is None:
+        return research and row["status"] == "provisional"
     if timestamp(row["available_at"]) >= as_of:
         return False
     if research and row["status"] == "provisional":
@@ -193,6 +195,12 @@ def train(request, directory):
     selected = min(METHODS, key=lambda method: (candidates[method]["validation"]["WAPE_pct"] if candidates[method]["validation"]["WAPE_pct"] is not None else candidates[method]["validation"]["MAE_t"], candidates[method]["validation"]["MAE_t"]))
     model_id = canonical_sha({"snapshot_id": request["snapshot_id"], "sha": request["dataset_sha256"], "product": request["product_code"], "seed": request["seed"], "mode": request["mode"], "code_sha": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()})
     report = {"status": "completed", "model_id": model_id, "snapshot_id": request["snapshot_id"], "dataset_sha256": request["dataset_sha256"], "product_code": request["product_code"], "time_granularity": "monthly", "prediction_horizon": "next_month", "feature_schema": FEATURE_SCHEMA, "features": FEATURES, "seed": request["seed"], "mode": request["mode"], "selected_method": selected, "selection_basis": "validation_only", "evaluation_protocol": "one_step_monthly_fixed_model_with_past_available_actuals", "artifact_fit": "train_and_validation_only_no_test_refit", "eligible_rows": len(examples), "can_deploy": False, "promotion_status": "awaiting_human_review", "split": {"train": [dates[train_indices[0]], dates[train_indices[-1]]], "validation": [dates[validation[0]], dates[validation[-1]]], "test": [dates[test[0]], dates[test[-1]]]}, "candidates": candidates, "code_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "environment": {name: importlib.metadata.version(name) for name in ["numpy", "scikit-learn", "xgboost", "fastapi"]}, "quality_warning": "Candidate only. No automatic deployment; small monthly history and shutdown evidence require independent review.", "postprocessing": "none; negative predictions flagged, never silently clipped"}
+    if research and any(row['available_at'] is None for row in rows):
+        report['availability_policy'] = 'retrospective_unknown_not_point_in_time'
+        report['evaluation_protocol'] = 'retrospective_one_step_monthly_prior_period_assumption'
+        report['quality_warning'] = 'Retrospective research assumes prior-month values were available; historical availability is unknown. Not a point-in-time backtest and never deployable.'
+    if research:
+        report['promotion_status'] = 'research_only_blocked'
     artifact = {"report": report, "model": serialize_model(selected, fitted[selected])}
     content = canonical_bytes(artifact)
     directory = Path(directory); directory.mkdir(parents=True, exist_ok=True)

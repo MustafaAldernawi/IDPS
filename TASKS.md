@@ -43,3 +43,11 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 
 - [x] Integrated software verification checkpoint: backend27 tests/187 assertions, frontend6 tests/build, service+parser14 tests. Evidence in docs/PROGRESS.md.
 - [ ] Full V1 acceptance remains open: pending reference/calendar workflows, restore drill, independent review and departmental UAT. Passing implementation tests does not approve refinery data or models.
+
+## Integration readiness — 2026-11-10
+
+- [ ] Complete all 119-ticket assessments and acceptance evidence in `docs/V1_READINESS_MATRIX.md`; review is conservative and not UAT.
+- [ ] Verify retrospective research Laravel-to-Python integration on MySQL, then independently review calendar/quality APIs and backup/restore workflow.
+
+- [x] Retrospective research assumptions, reference APIs, local runtime and isolated MySQL restore software checks. See docs/PROGRESS.md Batch 3.
+- [ ] Complete file/artifact backup, reference user interfaces, full E2E, domain approvals and UAT; see docs/V1_READINESS_MATRIX.md.
