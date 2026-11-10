@@ -16,7 +16,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_mysql
+          extensions: pdo_mysql, bcmath, zip, gd
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -36,3 +36,12 @@ jobs:
           DB_PASSWORD: ci-only-password
       - run: npm ci --ignore-scripts && npm run build && npm run test:unit -- --run
         working-directory: apps/frontend
+  ai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r services/ai/requirements.txt openpyxl
+      - run: python -B -m pytest -q -p no:cacheprovider services/ai/tests tests/test_monthly_parser.py

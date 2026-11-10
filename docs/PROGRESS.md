@@ -17,7 +17,17 @@ Read this file, `planning/DECISIONS.md`, `TASKS.md`, and `git log -8 --oneline`.
 - RED: connectivity test failed because driver was SQLite. GREEN: backend 3 tests / 11 assertions on real MySQL. Missing testing APP_KEY fixed using key:generate, no secret output.
 - Frontend `npm run check` passes (lint, 1 test, typecheck/build); full npm audit 0. Scoped patched minimatch/glob overrides; no framework major changes.
 - Composer Boost installed per local instructions; generated guidelines reviewed. Composer audit no advisories. CI added (not remotely executed).
-- HTTP smoke and final batch commit next, then identity/RBAC/audit.
+- HTTP smoke: both backend 8000 and Vue 5173 returned 200. Commit `6434e55` records verified foundation (initial safe source baseline `541658c`).
+
+## Batch 2 — governance / imports / operational modules — IN PROGRESS
+
+- Governance implemented: UUID users, hashed expiring/revocable bearer tokens, explicit role/permission matrix and facility/unit scopes; independent process approval; append audit API. No production self-approval permissions for SYSTEM_ADMIN or ML_OPERATOR.
+- Core+initial operations tests GREEN: 8 / 52 assertions (agent); root governance+import+precision GREEN: 6 / 38 assertions, real MySQL. Import tests cover replay, lineage, independent review, stale lock rejection, no invented daily rows. New revision/unique approved-scope safeguards require next run.
+- Audit SQL triggers rejected because binary logging requires SUPER; do not weaken global MySQL settings. Use runtime per-table SELECT/INSERT-only audit/approval grants after migrations; migrator remains separate. `scripts/harden_local_mysql.php` pending local verification.
+- Parser: 2021,2022,2023 original workbooks each 336 long observations (28 measurements per month). Label/header guards; source locators; raw precision retained and rounding flagged; ambiguous fuel/loss semantics and source disagreements stay in reconciliation.
+- Shared test DB concurrency caused transient reset collisions between agents. Central root-owned DB token now serializes all MySQL suites; no results from collided runs counted.
+- Python service: new integrity/availability/serialization tests + research regression pass; Laravel queue integration initially GREEN 4/16. Full integrated run pending. Missing historical availability => `not_ready`, never backdated.
+- Current work: reports/engineering definitions; full RTL frontend; final async integration, real source staging (unapproved), permissions hardening, backup/restore and cross-service smoke.
 
 ## Remaining batches
 
@@ -30,3 +40,14 @@ Read this file, `planning/DECISIONS.md`, `TASKS.md`, and `git log -8 --oneline`.
 ## Engineering gates (do not guess)
 
 Unresolved source totals and 2023 semi-actual conflicts; final product stages; fuel/loss scope and energy factors; model promotion thresholds. Software must expose pending/not-ready and preserve original values. These do not prevent implementing review workflows.
+
+## Checkpoint — 2026-11-10
+
+- Local source staging executed: 12 original hashes verified, 3 workbook batches /1008 long facts over36 months; replay returned existing batches for all3. No engineering approval performed.
+- Original-workbook versus provisional-CSV comparison: 956/1008 equal at6 decimals; 52 differences retained for review (precision differences plus2 original missing cells). Never replace originals or fill missing raw cells from CSV.
+- Live HTTP smoke: Laravel+MySQL+FastAPI health up. Research snapshot created through authenticated API, public training returned queued, real queue worker persisted not_ready/missing_historical_availability_or_quantity/can_deploy=false. This is expected truthful gating, not failed infrastructure and not evidence of a trained refinery model.
+- Runtime grants hardened: audit_logs/approval_actions SELECT+INSERT only, separate migration account. Harden script rerun is idempotent (handles missing broad grants1141).
+- Frontend `npm run check` GREEN:6 tests, lint/typecheck/build. Python current synthetic service+parser suite14 passing; prior combined research regression21 passing. Formatting applied; final combined backend run in progress.
+- Added durable outbox consumer command `php artisan idps:process-outbox` scheduled every minute; queue worker handles immutable event revisions and retry idempotency. Event-adjusted quantities remain unavailable without signed assumptions.
+- Remaining: final integrated backend checks/review, reference catalogs/calendar/unit timeline, automated local start/backup+restore drill, scope completeness/UAT matrix. V1 is NOT declared complete.
+- Final checkpoint backend run GREEN:27 tests /187 assertions on real MySQL;40 API routes registered. Includes governance, imports, operations/engineering/report outputs, AI activation/retry and reforecast suites. Local owner UAT and completeness gates remain open.

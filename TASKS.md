@@ -38,3 +38,8 @@
 ### Done means
 
 API+DB migration+UI+tests+docs updated and exact command logs; no future actual features, no fabricated days, no unsafe DCS write access. `research_report.json` remains research until signed acceptance.
+
+## Continuous execution checkpoint 2026-11-10
+
+- [x] Integrated software verification checkpoint: backend27 tests/187 assertions, frontend6 tests/build, service+parser14 tests. Evidence in docs/PROGRESS.md.
+- [ ] Full V1 acceptance remains open: pending reference/calendar workflows, restore drill, independent review and departmental UAT. Passing implementation tests does not approve refinery data or models.
