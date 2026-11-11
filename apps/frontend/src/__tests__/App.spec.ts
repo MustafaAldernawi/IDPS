@@ -38,7 +38,7 @@ describe('IDPS console', () => {
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(wrapper.find('nav').exists()).toBe(true)
-    expect(wrapper.text()).toContain('لا توجد بيانات معتمدة')
+    expect(wrapper.text()).toContain('لا توجد مؤشرات متاحة')
     const dashboardRequest = fetchMock.mock.calls.find(([url]) => String(url).includes('/dashboard'))
     expect(new Headers(dashboardRequest?.[1]?.headers).get('Authorization')).toBe('Bearer ephemeral-test-token')
   })

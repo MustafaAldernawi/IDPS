@@ -154,3 +154,6 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Daily coverage now counts a day with multiple approved full-day records as ambiguous, excludes it from observed coverage and zero counts, and reports its date for review. It does not add records together or treat ambiguity as missing. Arabic UI presents ambiguous counts and dates.
 - Focused MySQL regression: 1 test /15 assertions passed, including null, zero, shifts and duplicate approved daily records. `npm run check`: 14 frontend tests, lint, typecheck and build passed. No source data changed.
 - Next: continue daily/shift data profiling, source ingestion and independent V1 gaps; preserve engineering definition blockers and do not infer records from monthly data.
+
+## Batch 16 — dashboard and shared workspace
+Dashboard shows permission-scoped Laravel register totals, explicitly separate from KPI filters. Shared shell typography and production/planning list failure states improved. npm run check passed (14 tests, lint, types, build); visual QA deferred. Next: production/planning editing and approval journeys.

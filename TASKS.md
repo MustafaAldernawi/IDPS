@@ -66,3 +66,5 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 - [x] Scope catalog reads to authorized facilities and units, including unit-scoped users; full MySQL regression 44 tests /373 assertions. RF-003/RF-006 remain partial pending broader security and reference lifecycle acceptance.
 - [x] Show source references and target revision for approved chemical comparisons; retain explicit ambiguity for multiple actuals. Updated stale readiness entries to match existing scheduler, evaluation, coverage and restore evidence.
 - [x] Daily coverage now separates multiple approved full-day records as ambiguous instead of summing or treating them as observed; targeted MySQL and UI tests passed. Full daily profiling remains partial.
+
+- [x] Dashboard register totals and distinct shared list failure states; production/planning CRUD acceptance remains open.

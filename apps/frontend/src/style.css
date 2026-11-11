@@ -6,3 +6,13 @@
 .checkbox-label{flex-direction:row;align-items:center;gap:12px}.checkbox-label input,input[type=checkbox]{width:16px;min-height:16px;height:16px;accent-color:var(--green)}.reconciliation-item{width:100%;border:1px solid var(--line);padding:16px;border-radius:8px}.reconciliation-item>div{display:flex;justify-content:space-between}.reconciliation-item strong{font-size:11px}.reconciliation-item>p{font-size:11px;color:var(--muted)}.reconciliation-item .button{margin-top:10px}
 .muted,.page-heading p,.freshness,.form-note,.form-footer p,.context-panel>p,.context-rule,.workflow-list p,.empty-state p,.login-note,.login-footer,.workspace-footer,.sidebar-footer,.nav-group-label,.page-heading .eyebrow,.detail-grid dt,.kpi-label,.kpi-card>p,.inline-filters label{color:#637568}.nav-group button{font-size:12px;color:#536858}.panel-title h2{font-size:14px}.page-heading p,.empty-state p,.workflow-list p,.context-panel>p{font-size:12px}th{font-size:11px;color:#637568}td{font-size:12px}.table-scroll input[type=checkbox]{cursor:pointer}.workspace-footer{color:#637568}
 .choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:15px 0}.factor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;border:1px solid var(--line);border-radius:8px;padding:18px;margin:15px 0}
+
+/* Shared application hierarchy */
+.sidebar .nav-group-label { font-size: 11px; }
+.sidebar nav button { min-height: 42px; }
+.sidebar nav button.active { box-shadow: inset -3px 0 var(--green); }
+.topbar { min-height: 64px; }
+.breadcrumb, .user-name strong { font-size: 13px; }
+.page-heading h1 { font-size: clamp(1.4rem, 2.4vw, 2rem); }
+.section-toolbar { padding-block-end: 12px; border-block-end: 1px solid var(--line); }
+.table-scroll td { font-variant-numeric: tabular-nums; }
