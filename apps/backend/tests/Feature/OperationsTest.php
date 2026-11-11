@@ -193,6 +193,31 @@ class OperationsTest extends TestCase
         return $user;
     }
 
+    public function test_revision_history_shows_scoped_rejection_and_predecessor(): void
+    {
+        [$producer, $reviewer, $facility, $product] = $this->fixtures();
+        $endpoint = '/api/v1/production-records';
+        $payload = $this->production($facility, $product);
+        $draft = $this->actingAs($producer)->postJson($endpoint, $payload)->assertCreated()->json('data.id');
+        $this->postJson("$endpoint/$draft/submit")->assertOk();
+        $this->actingAs($reviewer)->postJson("$endpoint/$draft/reject", ['reason' => 'Source requires correction'])->assertOk();
+        $replacement = $this->actingAs($producer)->postJson($endpoint, $payload + [
+            'replaces_id' => $draft,
+            'notes' => 'Source corrected',
+        ])->assertCreated()->json('data.id');
+
+        $this->getJson("$endpoint/$replacement/history")->assertOk()
+            ->assertJsonCount(2, 'data.versions')
+            ->assertJsonFragment(['id' => $replacement, 'replaces_id' => $draft])
+            ->assertJsonFragment(['action' => 'reject', 'reason' => 'Source requires correction', 'actor_name' => $reviewer->name])
+            ->assertJsonMissingPath('data.decisions.0.before_json');
+
+        $other = (string) Str::uuid();
+        DB::table('facilities')->insert(['id' => $other, 'code' => 'HISTORY-OTHER', 'name_ar' => 'Synthetic other facility']);
+        DB::table('user_roles')->where('user_id', $producer->id)->update(['facility_id' => $other]);
+        $this->getJson("$endpoint/$replacement/history")->assertNotFound();
+    }
+
     private function fixtures(): array
     {
         $this->seed(DatabaseSeeder::class);

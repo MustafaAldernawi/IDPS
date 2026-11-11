@@ -5,6 +5,7 @@ import { display, labels } from '../lib/presentation'
 import type { Resource } from '../lib/resources'
 import DataTable from './DataTable.vue'
 import RecordEditor from './RecordEditor.vue'
+import RecordHistory from './RecordHistory.vue'
 import StatusBadge from './StatusBadge.vue'
 import { useAccess } from '../lib/access'
 const props = defineProps<{ resource: Resource; api: Api }>()
@@ -64,6 +65,7 @@ const eventTime = ref('')
     </div>
     <div v-if="selected" class="panel detail-panel"><div class="panel-title"><h2>تفاصيل السجل</h2><button class="text-button" @click="selected = null">إغلاق ×</button></div>
       <dl class="detail-grid"><template v-for="[key, value] in detailFields" :key="key"><div><dt>{{ labels[key] ?? key }}</dt><dd><StatusBadge v-if="key.includes('status')" :value="value" /><span v-else>{{ display(value) }}</span></dd></div></template></dl>
+      <RecordHistory v-if="['/production-records', '/crude-feed-records', '/plans'].includes(resource.endpoint)" :key="String(selected.id)" :api="api" :endpoint="resource.endpoint" :id="String(selected.id)" />
       <div v-if="resource.workflow" class="review-actions"><label>سبب الإجراء<textarea v-model="reason" placeholder="اكتب سبب الاعتماد أو الرفض أو التصحيح" rows="2" /></label>
         <div class="button-row"><button v-if="['approved', 'draft', 'rejected'].includes(String(selected.status)) && mayWrite && resource.key !== 'events'" class="button secondary" @click="revise">إنشاء مراجعة تصحيحية</button><button v-if="selected.status === 'draft' && mayWrite" class="button primary" :disabled="saving" @click="transition('submit')">إحالة للمراجعة</button><template v-if="mayApprove && ['submitted', 'staged', 'flagged', 'reviewed', 'reported', 'pending'].includes(String(selected.status))"><button class="button primary" :disabled="saving" @click="transition('approve')">اعتماد السجل</button><button class="button secondary danger-text" :disabled="saving" @click="transition('reject')">رفض مع السبب</button></template>
         </div><template v-if="resource.key === 'events' && mayWrite"><label>وقت العودة<input v-model="eventTime" type="datetime-local" /></label><div class="button-row"><button class="button secondary" :disabled="saving" @click="transition('eta')">تحديث العودة المتوقعة</button><button class="button secondary" :disabled="saving || !eventTime" @click="transition('restart')">تسجيل العودة الفعلية</button></div><p class="muted">ترك الموعد فارغًا يعني أن العودة المتوقعة مجهولة. لا تُفترض مدة توقف.</p></template>

@@ -52,6 +52,52 @@ class OperationsController extends Controller
         return response()->json(['data' => $items, 'meta' => ['total' => $result->total(), 'current_page' => $result->currentPage(), 'last_page' => $result->lastPage()]]);
     }
 
+    public function history(Request $request, string $resource, string $id): JsonResponse
+    {
+        [$table, $write] = $this->resource($resource);
+        $permission = $this->hasAnyPermission($request, 'engineering.read') ? 'engineering.read' : $write;
+        abort_unless($this->hasAnyPermission($request, $permission), 403);
+        $scope = self::scoped(DB::table($table), $request, $permission);
+        $root = (clone $scope)->where('id', $id)->first();
+        abort_unless($root, 404);
+        $ancestors = [];
+        while ($root->replaces_id && ! isset($ancestors[$root->id])) {
+            $ancestors[$root->id] = true;
+            $parent = (clone $scope)->where('id', $root->replaces_id)->first();
+            if (! $parent) {
+                break;
+            }
+            $root = $parent;
+        }
+        $versions = collect([$root->id => $root]);
+        $frontier = [$root->id];
+        while ($frontier !== []) {
+            $children = (clone $scope)->whereIn('replaces_id', $frontier)->get()
+                ->reject(fn ($version) => $versions->has($version->id))->keyBy('id');
+            $versions = $versions->union($children);
+            $frontier = $children->keys()->all();
+        }
+        $decisions = DB::table('audit_logs as audit')
+            ->leftJoin('users as actors', 'actors.id', '=', 'audit.actor_id')
+            ->where('audit.resource_type', $resource)
+            ->whereIn('audit.resource_id', $versions->keys()->all())
+            ->whereIn('audit.action', ['submit', 'approve', 'reject', 'supersede'])
+            ->orderBy('audit.created_at')->orderBy('audit.id')
+            ->get(['audit.resource_id', 'audit.action', 'audit.created_at', 'audit.reason', 'actors.name as actor_name']);
+
+        return response()->json(['data' => [
+            'versions' => $versions->sortBy('created_at')->values()->map(fn ($version) => [
+                'id' => $version->id,
+                'replaces_id' => $versions->has($version->replaces_id ?? '') ? $version->replaces_id : null,
+                'revision_no' => $version->revision_no,
+                'status' => $version->status,
+                'source_reference' => $version->source_reference,
+                'created_at' => $version->created_at,
+            ]),
+            'decisions' => $decisions,
+        ]]);
+    }
+
     public function store(Request $request, string $resource): JsonResponse
     {
         [$table, $permission] = $this->resource($resource);

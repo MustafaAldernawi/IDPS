@@ -81,6 +81,7 @@ Route::prefix('v1')->group(function () {
         Route::post('engineering/annotations/{id}/approve', [EngineeringService::class, 'approveAnnotation']);
         Route::get('reports/monthly', [EngineeringService::class, 'export']);
         Route::get('comparisons/actual-target', [EngineeringService::class, 'comparison']);
+        Route::get('{resource}/{id}/history', [OperationsController::class, 'history'])->where('resource', 'production-records|crude-feed-records|plans')->whereUuid('id');
         Route::get('{resource}', [OperationsController::class, 'index'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');
         Route::post('{resource}', [OperationsController::class, 'store'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');
         Route::post('{resource}/{id}/{action}', [OperationsController::class, 'transition'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');

@@ -8,9 +8,21 @@ const values = reactive<Record<string, string>>({})
 const catalogs = ref<Record<string, Row[]>>({})
 const catalogError = ref('')
 const components = reactive([{ product_id: '', quantity: '', unit_code: 't' }])
+const originalTimes: Record<string, { input: string; iso: string }> = {}
 if (props.initial) {
   for (const f of props.fields) {
     const value = props.initial[f.key]
+    if (f.key === 'notes') continue
+    if (f.type === 'datetime-local' && typeof value === 'string') {
+      const iso = value.replace(/^(\d{4}-\d{2}-\d{2}) (.+)$/, '$1T$2Z')
+      const date = new Date(iso)
+      if (Number.isFinite(date.getTime())) {
+        const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+        originalTimes[f.key] = { input: local, iso }
+        values[f.key] = local
+      }
+      continue
+    }
     if (value !== undefined && value !== null && f.type !== 'json') values[f.key] = String(value)
   }
   const children = props.initial.targets ?? props.initial.components
@@ -30,7 +42,7 @@ function submit() {
     const value = values[f.key]
     payload[f.key] = f.type === 'json' ? components.map(c => ({ ...c }))
       : value === '' || value === undefined ? null
-        : f.type === 'datetime-local' ? new Date(value).toISOString() : value
+        : f.type === 'datetime-local' ? (originalTimes[f.key]?.input === value ? originalTimes[f.key]?.iso : new Date(value).toISOString()) : value
   }
   emit('save', payload)
 }
