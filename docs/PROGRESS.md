@@ -142,3 +142,9 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Fixed catalog read authorization for facility- and unit-scoped roles. Facilities and operational units are filtered to assigned scopes; shared product, crude and measurement-unit definitions remain readable with catalog permission. Catalog mutations remain globally restricted. Added negative and facility/unit/global scope coverage.
 - Full MySQL regression `php vendor/bin/phpunit --do-not-cache-result`: 44 tests /373 assertions passed. No migration or data changes. RF-003/RF-006 remain partial pending broader security testing, catalog lifecycle and owner acceptance.
 - Next: continue independent V1 gaps, particularly approved threshold configuration and reports; do not invent engineering limits or approve refinery data.
+
+## Batch 14 — chemical comparison provenance and readiness corrections
+
+- Chemical variance now returns source references and record IDs for unique approved inputs, plus target revision; the Arabic comparison shows both source references. Ambiguous actual groups deliberately expose no selected actual source. Updated stale RF-019/082/085/086/100 readiness entries based on already verified code and drills; none is claimed complete.
+- Focused MySQL chemical test: 1 test /22 assertions passed. Frontend `npm run check`: 14 tests, lint, typecheck and build passed. No migration, source change or approval of refinery data.
+- Next: implement other independent V1 gaps and maintain owner-dependent engineering thresholds and UAT as pending.

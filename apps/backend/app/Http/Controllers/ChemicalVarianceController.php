@@ -104,7 +104,7 @@ class ChemicalVarianceController extends Controller
             $row = $target ?? $actual;
             $status = count($group['actual'] ?? []) > 1 ? 'ambiguous_actual' : (!$target ? 'missing_target' : (!$actual || $actual->quantity === null ? 'missing_actual' : 'valid'));
             $variance = $status === 'valid' ? DB::selectOne('SELECT CAST(? AS DECIMAL(20,6)) - CAST(? AS DECIMAL(20,6)) AS variance', [$actual->quantity, $target->quantity])->variance : null;
-            $result[] = ['facility_id' => $row->facility_id, 'unit_id' => $row->unit_id, 'period_month' => $row->period_month, 'chemical_code' => $row->chemical_code, 'unit_code' => $row->unit_code, 'target' => $target?->quantity, 'actual' => $status === 'ambiguous_actual' ? null : $actual?->quantity, 'variance' => $variance, 'status' => $status];
+            $result[] = ['facility_id' => $row->facility_id, 'unit_id' => $row->unit_id, 'period_month' => $row->period_month, 'chemical_code' => $row->chemical_code, 'unit_code' => $row->unit_code, 'target' => $target?->quantity, 'actual' => $status === 'ambiguous_actual' ? null : $actual?->quantity, 'variance' => $variance, 'status' => $status, 'target_id' => $target?->id, 'target_revision' => $target?->revision_no, 'target_source' => $target?->source_reference, 'actual_id' => $status === 'ambiguous_actual' ? null : $actual?->id, 'actual_source' => $status === 'ambiguous_actual' ? null : $actual?->source_reference];
         }
         return response()->json(['data' => $result]);
     }

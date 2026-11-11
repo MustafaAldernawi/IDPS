@@ -8,7 +8,7 @@ describe('مقارنة استهلاك المواد الكيميائية', () => 
   it('يعرض غياب الفعلي دون تحويله إلى صفر ويحجب إدخال الخطة عن القارئ', async () => {
     const api = vi.fn<(path: string) => Promise<unknown>>(async (path: string) => {
       if (path === '/catalogs/facilities') return { data: [{ id: 'f', name_ar: 'المرفق' }] }
-      if (path.startsWith('/engineering/chemical-variance')) return { data: [{ chemical_code: 'CHEM', unit_code: 'kg', target: '0.000000', actual: null, variance: null, status: 'missing_actual' }] }
+      if (path.startsWith('/engineering/chemical-variance')) return { data: [{ chemical_code: 'CHEM', unit_code: 'kg', target: '0.000000', target_source: 'خطة مراجعة', target_revision: 2, actual: null, variance: null, status: 'missing_actual' }] }
       return { data: [] }
     })
     const wrapper = mount(ChemicalVarianceView, { props: { api: api as unknown as Api }, global: { provide: { permissions: computed(() => ['engineering.read']) } } })
@@ -19,6 +19,8 @@ describe('مقارنة استهلاك المواد الكيميائية', () => 
     await flushPromises()
     expect(wrapper.text()).toContain('الفعلي المعتمد غير متاح')
     expect(wrapper.text()).toContain('0.000000')
+    expect(wrapper.text()).toContain('خطة مراجعة')
+    expect(wrapper.text()).toContain('إصدار 2')
     expect(wrapper.text()).not.toContain('إدخال مستهدف مستقل')
   })
 })
