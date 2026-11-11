@@ -210,6 +210,97 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserProfile'
         '401': {$ref: '#/components/responses/Unauthorized'}
+  /users:
+    get:
+      tags: [Identity]
+      summary: List users and assigned roles
+      parameters:
+        - {name: q, in: query, required: false, schema: {type: string}}
+      responses:
+        '200': {description: Paginated users, roles, and assignments}
+        '403': {description: Missing users.manage permission}
+    post:
+      tags: [Identity]
+      summary: Create new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: {type: string}
+                email: {type: string, format: email}
+                password: {type: string}
+      responses:
+        '201': {description: User created}
+        '403': {description: Missing users.manage permission}
+  /users/{id}/status:
+    post:
+      tags: [Identity]
+      summary: Toggle active status of a user
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active, reason]
+              properties:
+                active: {type: boolean}
+                reason: {type: string, minLength: 10}
+      responses:
+        '200': {description: Status updated}
+        '403': {description: Cannot toggle self or missing users.manage}
+  /users/{user_id}/roles/{assignment_id}:
+    delete:
+      tags: [Identity]
+      summary: Revoke an assigned role
+      parameters:
+        - {name: user_id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: assignment_id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 10}
+      responses:
+        '200': {description: Role revoked}
+        '403': {description: Missing users.manage}
+  /catalogs/{catalog}:
+    get:
+      tags: [Masters]
+      summary: List catalog items filtered by authorized scope
+      parameters:
+        - {name: catalog, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Catalog items}
+        '403': {description: Missing catalogs.read}
+    post:
+      tags: [Masters]
+      summary: Create catalog item
+      parameters:
+        - {name: catalog, in: path, required: true, schema: {type: string}}
+      responses:
+        '201': {description: Item created}
+        '403': {description: Missing catalogs.manage}
+  /catalogs/{catalog}/{id}:
+    put:
+      tags: [Masters]
+      summary: Update catalog item
+      parameters:
+        - {name: catalog, in: path, required: true, schema: {type: string}}
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Item updated}
+        '403': {description: Missing catalogs.manage}
   /units:
     get:
       tags: [Masters]

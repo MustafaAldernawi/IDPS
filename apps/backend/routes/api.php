@@ -26,6 +26,7 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('catalogs/{catalog}', [CatalogController::class, 'index']);
         Route::post('catalogs/{catalog}', [CatalogController::class, 'store']);
+        Route::put('catalogs/{catalog}/{id}', [CatalogController::class, 'update']);
         Route::get('audit-logs', [CatalogController::class, 'audit']);
         Route::get('alerts', [AlertController::class, 'index']);
         Route::post('alerts/{id}/acknowledge', [AlertController::class, 'acknowledge']);
@@ -36,7 +37,9 @@ Route::prefix('v1')->group(function () {
         Route::get('unit-status/downtime', [DomainReferenceController::class, 'downtime']);
         Route::get('users', [UserController::class, 'index']);
         Route::post('users', [UserController::class, 'store']);
+        Route::post('users/{id}/status', [UserController::class, 'toggleStatus']);
         Route::post('users/{id}/roles', [UserController::class, 'assignRole']);
+        Route::delete('users/{userId}/roles/{assignmentId}', [UserController::class, 'revokeRole']);
         Route::get('imports', [ImportController::class, 'index']);
         Route::post('source-mappings/inspect', [SourceMappingController::class, 'inspect']);
         Route::get('source-mappings/unresolved', [SourceMappingController::class, 'unresolved']);
@@ -87,7 +90,7 @@ Route::prefix('v1')->group(function () {
         Route::post('engineering/annotations/{id}/approve', [EngineeringService::class, 'approveAnnotation']);
         Route::get('reports/monthly', [EngineeringService::class, 'export']);
         Route::get('comparisons/actual-target', [EngineeringService::class, 'comparison']);
-        Route::get('{resource}/{id}/history', [OperationsController::class, 'history'])->where('resource', 'production-records|crude-feed-records|plans')->whereUuid('id');
+        Route::get('{resource}/{id}/history', [OperationsController::class, 'history'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans')->whereUuid('id');
         Route::get('{resource}', [OperationsController::class, 'index'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');
         Route::post('{resource}', [OperationsController::class, 'store'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');
         Route::post('{resource}/{id}/{action}', [OperationsController::class, 'transition'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');

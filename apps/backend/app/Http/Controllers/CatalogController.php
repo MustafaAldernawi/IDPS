@@ -59,6 +59,44 @@ class CatalogController extends Controller
         return response()->json(['data' => $data], 201);
     }
 
+    public function update(Request $request, string $catalog, string $id)
+    {
+        Governance::authorize($request, 'catalogs.manage');
+        $table = self::TABLES[$catalog] ?? abort(404);
+        $keyColumn = $catalog === 'measurement-units' ? 'code' : 'id';
+        $existing = DB::table($table)->where($keyColumn, $id)->first();
+        abort_unless($existing, 404, 'Catalog item not found.');
+
+        $rules = [];
+        if ($catalog === 'measurement-units') {
+            $rules = [
+                'dimension' => 'sometimes|in:mass,volume,energy,time,ratio,quality',
+                'display_symbol' => 'sometimes|string|max:32',
+            ];
+        } else {
+            $rules = [
+                'name_ar' => 'sometimes|string|max:255',
+            ];
+            if ($catalog === 'units') {
+                $rules['facility_id'] = 'sometimes|uuid|exists:facilities,id';
+            }
+            if ($catalog === 'products') {
+                $rules['stage'] = 'sometimes|in:pending_review,intermediate_stream,final_product,blend_additive,fuel,byproduct,waste,other';
+            }
+        }
+        $data = $request->validate($rules);
+        abort_if(empty($data), 422, 'No fields to update.');
+
+        DB::transaction(function () use ($request, $table, $keyColumn, $id, $existing, $data) {
+            DB::table($table)->where($keyColumn, $id)->update($data);
+            Governance::audit($request, 'updated', $table, $id, (array) $existing, array_merge((array) $existing, $data));
+        });
+
+        $updated = DB::table($table)->where($keyColumn, $id)->first();
+
+        return response()->json(['data' => $updated]);
+    }
+
     public function audit(Request $request)
     {
         Governance::authorize($request, 'audit.read');

@@ -171,3 +171,10 @@ Production, crude and plans expose scope-filtered revision and decision history.
 - Import batch rejection (RF-017): added `reject` endpoint in `ImportController` allowing independent reviewer to reject pending import observations with lock_version check and audit entry; exposed decision history in preview and `ImportsView.vue`.
 - Runtime environment: configured `IDPS_PYTHON` to Python 3.14 in phpunit.xml and env files, ensuring openpyxl and AI dependencies are reliably resolved across tests and services.
 - Verification: MySQL backend 50 tests / 475 assertions passed; Python service 17 tests passed; frontend 16 tests, lint, typecheck and Vite build passed; blueprint verification passed.
+
+## Batch 20 — user status lifecycle, role revocation, catalog updates and universal operational history
+- User management lifecycle (RF-002, RF-003): added user search filtering, audited status activation/deactivation (`POST /users/{id}/status`, self-change forbidden), and audited role assignment revocation (`DELETE /users/{userId}/roles/{assignmentId}`).
+- Catalog management (RF-006): added catalog update endpoint (`PUT /catalogs/{catalog}/{id}`) with audit tracking for facilities, units, products, crudes, and measurement units.
+- Universal operational history: expanded revision and decision history endpoint to cover all 8 operational measurement resources (production, crude feed, energy, losses, chemicals, quality samples, blend batches, and target plans).
+- Frontend improvements: enhanced `AdminView.vue` with user search, status badges and modal toggle, readable assignment names (user, role, facility, unit), and role revocation with reason prompt. Updated `ResourceView.vue` to display `RecordHistory` for all measurement resources and allow editing catalog entries.
+- Verification: GovernanceTest 6 tests / 53 assertions passed on MySQL; frontend 10 test files / 17 tests, lint, typecheck and Vite build passed; OpenAPI spec updated; blueprint verification passed.

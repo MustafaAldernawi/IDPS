@@ -73,3 +73,4 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 
 - [x] Scoped operational version and approval history, independent planning replacement lifecycle test and scoped dashboard summaries/trends; departmental acceptance remains pending.
 - [x] Scanned report reviewed transcription workflow, PDF fingerprinting and independent verification/rejection; import batch rejection with lock version and decision history; 50 MySQL tests / 475 assertions, 16 frontend tests and build passed.
+- [x] User management lifecycle (active toggle, role assignment and revocation), catalog updates, and universal operational history across all 8 measurement resources; 6 Governance MySQL tests passed, 17 frontend tests and build passed.
