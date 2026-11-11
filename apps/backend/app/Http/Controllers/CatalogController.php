@@ -13,10 +13,26 @@ class CatalogController extends Controller
 
     public function index(Request $request, string $catalog)
     {
-        Governance::authorize($request, 'catalogs.read');
         $table = self::TABLES[$catalog] ?? abort(404);
+        $scopes = DB::table('user_roles as ur')->join('role_permissions as rp', 'rp.role_id', '=', 'ur.role_id')
+            ->join('permissions as p', 'p.id', '=', 'rp.permission_id')
+            ->leftJoin('refinery_units as u', 'u.id', '=', 'ur.unit_id')
+            ->where('ur.user_id', $request->user()->id)->where('p.code', 'catalogs.read')
+            ->select('ur.facility_id', 'ur.unit_id', 'u.facility_id as unit_facility_id')->get();
+        abort_if($scopes->isEmpty(), 403);
+        $global = $scopes->contains(fn ($s) => $s->facility_id === null && $s->unit_id === null);
+        $facilityScopes = $scopes->filter(fn ($s) => $s->facility_id !== null && $s->unit_id === null)->pluck('facility_id')->all();
+        $unitScopes = $scopes->filter(fn ($s) => $s->unit_id !== null && $s->unit_facility_id !== null && ($s->facility_id === null || $s->facility_id === $s->unit_facility_id));
+        $unitIds = $unitScopes->pluck('unit_id')->all();
+        $facilityIds = array_values(array_unique(array_merge($facilityScopes, $unitScopes->pluck('unit_facility_id')->all())));
+        $query = DB::table($table);
+        if (! $global && $catalog === 'facilities') {
+            $query->whereIn('id', $facilityIds);
+        } elseif (! $global && $catalog === 'units') {
+            $query->where(fn ($q) => $q->whereIn('facility_id', $facilityScopes)->orWhereIn('id', $unitIds));
+        }
 
-        return response()->json(['data' => DB::table($table)->orderBy('code')->get()]);
+        return response()->json(['data' => $query->orderBy('code')->get()]);
     }
 
     public function store(Request $request, string $catalog)

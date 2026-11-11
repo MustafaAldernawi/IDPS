@@ -136,3 +136,9 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - MySQL regression before the final additional mismatched-unit assertion: 43 tests /353 assertions passed; focused regression including that assertion: 1 test /19 assertions passed. Frontend `npm run check`: 14 tests, lint, type checking and production build passed. `python scripts/verify_blueprint.py` passed.
 - RF-026/RF-048 remain partial: owner-approved norms and versioned alert thresholds, UAT, and approved daily/shift aggregation rules are not supplied. No real data or model was approved.
 - Next: continue independent readiness gaps including versioned reviewed thresholds, reports and remaining source ingestion workflows; preserve all blocked engineering choices.
+
+## Batch 13 — scoped catalog access
+
+- Fixed catalog read authorization for facility- and unit-scoped roles. Facilities and operational units are filtered to assigned scopes; shared product, crude and measurement-unit definitions remain readable with catalog permission. Catalog mutations remain globally restricted. Added negative and facility/unit/global scope coverage.
+- Full MySQL regression `php vendor/bin/phpunit --do-not-cache-result`: 44 tests /373 assertions passed. No migration or data changes. RF-003/RF-006 remain partial pending broader security testing, catalog lifecycle and owner acceptance.
+- Next: continue independent V1 gaps, particularly approved threshold configuration and reports; do not invent engineering limits or approve refinery data.

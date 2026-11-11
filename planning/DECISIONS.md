@@ -47,3 +47,7 @@
 ## Implementation decision — chemical variance, 2026-11-11
 
 Chemical planning targets are independent, individually approved monthly records; a revision supersedes the prior target only after independent approval. Compare only approved monthly actuals in exactly the same facility, operational unit, month, chemical and measurement unit. Multiple monthly actuals are ambiguous and daily/shift entries are not implicitly aggregated. Missing and zero remain distinct. No engineering thresholds or normative targets are invented; their definition and departmental acceptance remain open. A future aggregation method requires an approved engineering definition.
+
+## Implementation decision — scoped catalog listing, 2026-11-11
+
+Catalog read roles scoped to a unit see that unit and its parent facility; facility-scoped roles see their facility and its units; a global role sees all. Shared measurement, product and crude reference catalogs are available to holders of catalog read permission. Catalog writes still require global catalog management permission.

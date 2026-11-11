@@ -63,3 +63,4 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 - [x] Explicit flat monthly XLSX sheet mapping and cell lineage with independent review and idempotent replay; arbitrary workbook/daily/shift mappings remain open.
 - [x] Informational trip alerts with scoped acknowledgment and audit, 42 backend /13 frontend tests. Escalation and target risk policies remain pending.
 - [x] Chemical target drafts, independent approval and revisions, plus exact-scope monthly actual variance and Arabic UI. RF-026/RF-048 remain partial pending approved thresholds, normative definitions and owner UAT; see `docs/PROGRESS.md` Batch 12.
+- [x] Scope catalog reads to authorized facilities and units, including unit-scoped users; full MySQL regression 44 tests /373 assertions. RF-003/RF-006 remain partial pending broader security and reference lifecycle acceptance.
