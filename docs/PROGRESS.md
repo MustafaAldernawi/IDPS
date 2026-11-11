@@ -104,3 +104,9 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Added forecast-versus-approved-actual evaluations, monthly candidate retraining policies and conservative monitoring. One earliest-as-of forecast per month is counted; mixed engine/model scope returns ambiguous_scope until filtered. A sample minimum of 12 is a configurable technical floor, not an approved scientific threshold; drift remains unclaimed without a signed threshold.
 - MySQL migrations 160000/170000 applied locally and scoped grants refreshed. `php vendor/bin/phpunit --do-not-cache-result`: 39 tests /309 assertions; Python service/parser16 tests; frontend npm check10 tests and build. All on local/test only.
 - Next: integrate approved source dictionary with CSV/XLSX importer and reviewer interface, expose retraining/monitoring UI, then full real queue/restore/E2E, security and remaining readiness matrix gaps. No engineering or model approval inferred.
+
+## Batch 8 — monitoring UI and regression
+
+- Added Arabic view for evaluation summaries and governed monthly retraining policies; users select facility/product and may filter engine/model. Insufficient samples and ambiguous scopes are explicit; no statistical drift claim is shown. Added evaluation action for completed forecasts against matching approved actuals.
+- `npm run check`: 11 tests, lint, TypeScript and Vite build passed. Full MySQL backend regression: 39 tests /309 assertions passed. Current FastAPI health training SHA matches source. Scheduler and worker restarted under managed local runtime after checking process identities.
+- Remaining: integrate unknown-source mapping with importer and reviewer UI, verify real approved-data retraining only when owner approvals/adequate data exist, complete operational/safety/security and full UAT gates in readiness matrix. No model promotion performed.
