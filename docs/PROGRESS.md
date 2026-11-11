@@ -163,3 +163,11 @@ Draft and rejected revisions preserve lineage and require author permission; app
 
 ## Batch 18 — approval history, planning lifecycle and scoped dashboard
 Production, crude and plans expose scope-filtered revision and decision history. Planning replacement lifecycle verified through the public API, including retained active predecessor after rejection. Dashboard separates all-time scoped counts from monthly status distribution and shows approved comparisons, six-month product trends and selected-unit approved downtime. No engineering definitions changed. MySQL: 48 tests /438 assertions; frontend: 15 tests, lint, types and build. No visual QA. Next: remaining catalog lifecycle and report acceptance per readiness matrix.
+
+## Batch 19 — scanned report reviewed transcription, batch rejection and runtime environment
+- Scanned report transcription workflow (RF-013): created `report_transcriptions` migration (MySQL table with UUID, facility, source_file, created_by, reviewed_by, page, locator, source_text, status, review_reason, timestamps).
+- Implemented `ReportTranscriptionController` with facility-scoped index, store with SHA-256 PDF fingerprinting and dedup, download with storage integrity check, and independent review/rejection with audit logging.
+- Arabic RTL interface `ReportTranscriptions.vue` added with PDF upload form, paginated transcription register, detailed inspection, and reviewer verification/rejection controls. Nav item registered in `App.vue` with `imports.read` guard.
+- Import batch rejection (RF-017): added `reject` endpoint in `ImportController` allowing independent reviewer to reject pending import observations with lock_version check and audit entry; exposed decision history in preview and `ImportsView.vue`.
+- Runtime environment: configured `IDPS_PYTHON` to Python 3.14 in phpunit.xml and env files, ensuring openpyxl and AI dependencies are reliably resolved across tests and services.
+- Verification: MySQL backend 50 tests / 475 assertions passed; Python service 17 tests passed; frontend 16 tests, lint, typecheck and Vite build passed; blueprint verification passed.

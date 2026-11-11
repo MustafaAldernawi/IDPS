@@ -25,6 +25,85 @@ tags:
   - name: Training
   - name: Jobs
 paths:
+  /report-transcriptions:
+    get:
+      tags: [Imports]
+      summary: List human transcriptions in the authorized facility
+      parameters:
+        - {name: facility_id, in: query, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Paginated entries and review status}
+        '403': {description: Missing scoped import read permission}
+    post:
+      tags: [Imports]
+      summary: Stage a human transcription linked to a fingerprinted PDF and page
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [facility_id, source, page, locator, source_text]
+              properties:
+                facility_id: {type: string, format: uuid}
+                source: {type: string, format: binary}
+                page: {type: integer, minimum: 1}
+                locator: {type: string, maxLength: 160}
+                source_text: {type: string, maxLength: 10000}
+      responses:
+        '201': {description: Pending evidence record; no canonical observation created}
+        '403': {description: Missing scoped import write permission}
+        '422': {description: Invalid source or locator}
+  /report-transcriptions/{id}/source:
+    get:
+      tags: [Imports]
+      summary: Download the fingerprint-verified source PDF within the facility scope
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Original PDF}
+        '403': {description: Missing scoped import read permission}
+        '409': {description: Source missing or integrity verification failed}
+  /report-transcriptions/{id}/review:
+    post:
+      tags: [Imports]
+      summary: Independently verify or reject a transcription as source evidence
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason]
+              properties:
+                decision: {type: string, enum: [verified, rejected]}
+                reason: {type: string, maxLength: 2000}
+      responses:
+        '200': {description: Decision recorded; canonical facts unchanged}
+        '403': {description: Missing permission or self-review}
+        '409': {description: Entry already reviewed}
+  /imports/{id}/reject:
+    post:
+      tags: [Imports]
+      summary: Reject pending observations without changing previously approved observations
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lock_version, reason]
+              properties:
+                lock_version: {type: integer, minimum: 1}
+                reason: {type: string, minLength: 10, maxLength: 2000}
+      responses:
+        '200': {description: Rejection and review history recorded}
+        '403': {description: Missing approval permission or self-review}
+        '409': {description: Stale version or no pending observations}
   /chemical-targets:
     get:
       tags: [Plans]

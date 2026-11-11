@@ -41,6 +41,31 @@ class ImportTest extends TestCase
         $this->actingAs($reviewer)->postJson('/api/v1/imports/'.$id.'/approve', ['reason' => 'Stale review must be rejected', 'lock_version' => 1])->assertConflict();
     }
 
+    public function test_rejecting_remaining_observations_preserves_previously_approved_values(): void
+    {
+        $this->seed();
+        $writer = $this->actor('DATA_STEWARD');
+        $reviewer = $this->actor('PROCESS_ENGINEER');
+        $csv = "month,period_granularity,product_diesel_actual_t,product_diesel_target_t\n2026-01,month,123,200\n";
+        $id = $this->actingAs($writer)->postJson('/api/v1/imports', [
+            'file' => UploadedFile::fake()->createWithContent('monthly.csv', $csv),
+            'facility_id' => DB::table('facilities')->value('id'),
+        ])->assertCreated()->json('data.id');
+        $actual = DB::table('monthly_observations')->where('actual_or_target', 'actual')->value('id');
+        $reason = 'Target differs from source document';
+        $this->postJson("/api/v1/imports/$id/reject", ['reason' => $reason, 'lock_version' => 1])->assertForbidden();
+        $this->actingAs($reviewer)->postJson("/api/v1/imports/$id/approve", [
+            'reason' => 'Verified the actual value', 'lock_version' => 1, 'observation_ids' => [$actual],
+        ])->assertOk();
+        $this->postJson("/api/v1/imports/$id/reject", ['reason' => $reason, 'lock_version' => 1])->assertConflict();
+        $this->postJson("/api/v1/imports/$id/reject", ['reason' => $reason, 'lock_version' => 2])
+            ->assertOk()->assertJsonPath('data.rejected_count', 1)->assertJsonPath('data.lock_version', 3);
+        $this->assertDatabaseHas('monthly_observations', ['id' => $actual, 'status' => 'approved', 'quantity' => '123.000000']);
+        $this->assertDatabaseHas('monthly_observations', ['actual_or_target' => 'target', 'status' => 'rejected', 'quantity' => '200.000000']);
+        $this->assertDatabaseHas('approval_actions', ['resource_id' => $id, 'action' => 'rejected', 'actor_id' => $reviewer->id, 'reason' => $reason]);
+        $this->getJson("/api/v1/imports/$id/preview")->assertOk()->assertJsonFragment(['action' => 'rejected', 'reason' => $reason]);
+    }
+
     public function test_daily_disguised_as_monthly_and_missing_quantity_never_approved(): void
     {
         $this->seed();

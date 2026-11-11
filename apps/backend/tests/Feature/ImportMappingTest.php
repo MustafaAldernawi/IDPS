@@ -54,7 +54,8 @@ class ImportMappingTest extends TestCase
         $file = tempnam(sys_get_temp_dir(), 'idps-test-');
         try {
             $script = 'import openpyxl,sys; w=openpyxl.Workbook(); s=w.active; s.title="Sheet1"; s.append(["month","DieselAlias"]); s.append(["2026-01",12.25]); w.save(sys.argv[1])';
-            $process = new Process(['python', '-c', $script, $file]);
+            $python = env('IDPS_PYTHON') ?: (file_exists('C:\\Python314\\python.exe') ? 'C:\\Python314\\python.exe' : 'python');
+            $process = new Process([$python, '-c', $script, $file]);
             $process->mustRun();
             $upload = fn () => new UploadedFile($file, 'synthetic.xlsx', null, null, true);
             $context = [['alias' => 'DieselAlias', 'source_scope' => 'Sheet1', 'unit_code' => 't', 'granularity' => 'monthly', 'product_stage' => 'intermediate_stream', 'locator' => ['sheet' => 'Sheet1', 'cell' => 'B1']]];

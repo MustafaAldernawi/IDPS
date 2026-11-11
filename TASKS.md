@@ -72,3 +72,4 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 - [x] Author draft edits and rejected-record corrections as append-only revisions; scoped operational list search. Full CRUD acceptance remains open.
 
 - [x] Scoped operational version and approval history, independent planning replacement lifecycle test and scoped dashboard summaries/trends; departmental acceptance remains pending.
+- [x] Scanned report reviewed transcription workflow, PDF fingerprinting and independent verification/rejection; import batch rejection with lock version and decision history; 50 MySQL tests / 475 assertions, 16 frontend tests and build passed.

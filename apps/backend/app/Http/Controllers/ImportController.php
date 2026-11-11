@@ -32,7 +32,12 @@ class ImportController extends Controller
         abort_unless($batch, 404);
         $rows = DB::table('monthly_observations as o')->join('import_rows as r', 'r.id', '=', 'o.import_row_id')->where('r.batch_id', $id)->select('o.*', 'r.source_locator', 'r.qa_flags', 'r.raw_json')->orderBy('o.period_month')->paginate(100);
 
-        return response()->json(['data' => ['batch' => $batch, 'observations' => $rows, 'reconciliation_cases' => DB::table('reconciliation_cases')->where('batch_id', $id)->get()]]);
+        $decisions = DB::table('approval_actions as a')->join('users as u', 'u.id', '=', 'a.actor_id')
+            ->where('a.resource_type', 'import_batches')->where('a.resource_id', $id)
+            ->orderByDesc('a.created_at')->orderByDesc('a.id')
+            ->get(['a.id', 'a.action', 'a.reason', 'a.created_at', 'u.name as reviewer']);
+
+        return response()->json(['data' => ['batch' => $batch, 'observations' => $rows, 'reconciliation_cases' => DB::table('reconciliation_cases')->where('batch_id', $id)->get(), 'decisions' => $decisions]]);
     }
 
     public function resolve(Request $request, string $id)
@@ -82,6 +87,34 @@ class ImportController extends Controller
             Governance::audit($request, 'approved', 'import_batches', $id, ['status' => $batch->status], ['approved_count' => $observations->count()], $data['reason']);
 
             return response()->json(['data' => ['approved_count' => $observations->count(), 'lock_version' => $batch->lock_version + 1]]);
+        }, 3);
+    }
+
+    public function reject(Request $request, string $id)
+    {
+        Governance::authorize($request, 'imports.approve');
+        $data = $request->validate(['reason' => 'required|string|min:10|max:2000', 'lock_version' => 'required|integer|min:1']);
+
+        return DB::transaction(function () use ($request, $id, $data) {
+            $batch = DB::table('import_batches')->where('id', $id)->lockForUpdate()->first();
+            abort_unless($batch, 404);
+            abort_if($batch->created_by === $request->user()->id, 403, 'Independent reviewer required');
+            abort_unless($batch->lock_version === (int) $data['lock_version'], 409, 'Stale review');
+            $observations = DB::table('monthly_observations')
+                ->whereIn('import_row_id', DB::table('import_rows')->where('batch_id', $id)->select('id'));
+            $pending = (clone $observations)->whereIn('status', ['staged', 'flagged', 'reviewed']);
+            $ids = $pending->lockForUpdate()->pluck('id');
+            abort_if($ids->isEmpty(), 409, 'No pending observations');
+            abort_if((clone $pending)->where('created_by', $request->user()->id)->exists(), 403, 'Revision author cannot reject own fact');
+
+            $pending->update(['status' => 'rejected']);
+            $status = (clone $observations)->whereNotNull('approved_at')->exists() ? 'reviewed' : 'rejected';
+            $nextVersion = $batch->lock_version + 1;
+            DB::table('import_batches')->where('id', $id)->update(['status' => $status, 'lock_version' => $nextVersion]);
+            DB::table('approval_actions')->insert(['id' => (string) Str::uuid(), 'resource_type' => 'import_batches', 'resource_id' => $id, 'actor_id' => $request->user()->id, 'action' => 'rejected', 'reason' => $data['reason'], 'created_at' => now()]);
+            Governance::audit($request, 'rejected', 'import_batches', $id, ['status' => $batch->status], ['status' => $status, 'observation_ids' => $ids->all()], $data['reason']);
+
+            return response()->json(['data' => ['rejected_count' => $ids->count(), 'status' => $status, 'lock_version' => $nextVersion]]);
         }, 3);
     }
 

@@ -25,7 +25,32 @@ async function upload() {
   catch (e) { error.value = e instanceof ApiError && e.status === 409 && mappingContexts.value.length ? 'أُحيل العمود غير المعروف إلى قائمة المراجعة. حدّث القائمة، ثم أرسل اقتراح الربط لاعتماد مستقل.' : e instanceof ApiError ? e.message : 'تعذر رفع المصدر' }
   finally { busy.value = false }
 }
-async function show(row: Row) { selectedId.value = String(row.id); error.value = ''; try { const result = await props.api<{ data: Row }>(`/imports/${row.id}/preview`); preview.value = result.data ?? result as Row } catch (e) { error.value = e instanceof ApiError ? e.message : 'تعذر عرض المعاينة' } }
+let previewRequest = 0
+async function show(row: Row) {
+  const request = ++previewRequest
+  selectedId.value = String(row.id)
+  selectedIds.value = []
+  reason.value = ''
+  preview.value = null
+  error.value = ''
+  try {
+    const result = await props.api<{ data: Row }>(`/imports/${row.id}/preview`)
+    if (request === previewRequest) preview.value = result.data ?? result as Row
+  } catch (e) {
+    if (request === previewRequest) error.value = e instanceof ApiError ? e.message : 'تعذر عرض المعاينة'
+  }
+}
+async function reject() {
+  if (reason.value.trim().length < 10) { error.value = 'أدخل سبب الرفض في عشرة أحرف على الأقل.'; return }
+  busy.value = true; error.value = ''; success.value = ''
+  try {
+    const batch = preview.value?.batch as Row | undefined
+    await props.api(`/imports/${selectedId.value}/reject`, { method: 'POST', body: { reason: reason.value, lock_version: batch?.lock_version } })
+    success.value = 'حُفظ رفض القيم المعلقة. تبقى القيم المعتمدة في سجلها.'
+    await show({ id: selectedId.value }); await load()
+  } catch (e) { error.value = e instanceof ApiError ? e.message : 'تعذر حفظ الرفض' }
+  finally { busy.value = false }
+}
 async function approve() {
   if (!selectedIds.value.length) { error.value = 'حدد القيم التي راجعتها قبل الاعتماد.'; return }
   if (!reason.value.trim()) { error.value = 'أدخل نتيجة المراجعة وسبب الاعتماد.'; return }
@@ -48,7 +73,7 @@ async function resolveCase(row: Row) {
   <div v-if="can('imports.write')" class="panel"><div class="panel-title"><h2>إضافة مصدر بيانات</h2><span class="badge">CSV / Excel</span></div><form class="upload-zone" @submit.prevent="upload"><span class="upload-symbol" aria-hidden="true">↥</span><h3>ابدأ بالملف الأصلي</h3><p>يُحفظ المصدر كما هو وتُفحص قيمه قبل المراجعة والاعتماد.</p><div class="inline-filters"><label>المرفق<select v-model="facility" required><option value="">اختر المرفق</option><option v-for="item in facilities" :key="String(item.id)" :value="String(item.id)">{{ item.name_ar ?? item.code }}</option></select></label><label>سنة ملف Excel إن لزم<input v-model="year" type="number" min="2000" max="2100" placeholder="2021" /></label><label>ورقة Excel جدولية، اختياري<input v-model="flatSheet" maxlength="255" placeholder="اسم الورقة المطابق؛ اتركه فارغًا للملفات التاريخية" /></label></div><label class="file-label">اختر ملفًا<input type="file" accept=".csv,.xlsx" required @change="file = ($event.target as HTMLInputElement).files?.[0]" /></label><span v-if="file" class="muted">{{ file.name }}</span><button class="button primary" :disabled="busy || !file || !facility">{{ busy ? 'جارٍ الرفع والفحص…' : 'رفع وفحص المصدر' }}</button></form></div>
   <SourceMappings v-if="facility" :api="api" :facility="facility" :flat-sheet="flatSheet.trim()" @contexts="mappingContexts = $event" />
   <div class="panel"><div class="panel-title"><h2>دفعات الاستيراد</h2><button class="text-button" @click="load">↻ تحديث</button></div><DataTable v-if="batches.length" :rows="batches" :columns="['original_name', 'status', 'row_count', 'created_at']" selectable @select="show" /><div v-else class="empty-state"><h3>لا توجد دفعات متاحة</h3><p>ارفع مصدرًا لبدء المراجعة.</p></div></div>
-  <div v-if="preview" class="panel"><div class="panel-title"><h2>معاينة وفحص الجودة</h2><StatusBadge :value="(preview.batch as Row)?.status ?? 'staged'" /></div><dl class="detail-grid"><div v-for="(value, key) in preview.batch as Row" :key="key"><dt>{{ labels[String(key)] ?? key }}</dt><dd>{{ display(value) }}</dd></div></dl><DataTable v-if="rowsOf(preview.rows ?? preview.observations).length" :rows="rowsOf(preview.rows ?? preview.observations)" :columns="['period_month', 'metric_code', 'item_code', 'quantity', 'status', 'qa_flags']" checkable :selected-ids="selectedIds" @check="toggle" /><div v-if="rowsOf(preview.reconciliation_cases).length" class="review-actions"><h3>حالات المطابقة والمراجعة</h3><div v-for="item in rowsOf(preview.reconciliation_cases)" :key="String(item.id)" class="reconciliation-item"><div><strong>{{ item.rule_code }}</strong><StatusBadge :value="item.status" /></div><p>{{ display(item.details) }}</p><template v-if="item.status === 'open' && can('imports.approve')"><label>قرار المراجعة<textarea v-model="caseResolution[String(item.id)]" rows="2" /></label><button class="button secondary" :disabled="busy" @click="resolveCase(item)">حفظ قرار المراجعة</button></template><p v-else>{{ display(item.resolution) }}</p></div></div><div v-if="can('imports.approve')" class="review-actions"><p class="notice warning">تحتاج الفروق والأسماء غير المحسومة إلى مراجعة هندسة العمليات. نجاح الفحص لا يعني اعتماد المصدر.</p><label>قرار المراجع وسببه<textarea v-model="reason" rows="3" minlength="10" /></label><button class="button primary" :disabled="busy" @click="approve">اعتماد القيم المحددة ({{ selectedIds.length }})</button></div></div>
+  <div v-if="preview" class="panel"><div class="panel-title"><h2>معاينة وفحص الجودة</h2><StatusBadge :value="(preview.batch as Row)?.status ?? 'staged'" /></div><dl class="detail-grid"><div v-for="(value, key) in preview.batch as Row" :key="key"><dt>{{ labels[String(key)] ?? key }}</dt><dd>{{ display(value) }}</dd></div></dl><DataTable v-if="rowsOf(preview.rows ?? preview.observations).length" :rows="rowsOf(preview.rows ?? preview.observations)" :columns="['period_month', 'metric_code', 'item_code', 'quantity', 'status', 'qa_flags']" checkable :selected-ids="selectedIds" @check="toggle" /><div v-if="rowsOf(preview.reconciliation_cases).length" class="review-actions"><h3>حالات المطابقة والمراجعة</h3><div v-for="item in rowsOf(preview.reconciliation_cases)" :key="String(item.id)" class="reconciliation-item"><div><strong>{{ item.rule_code }}</strong><StatusBadge :value="item.status" /></div><p>{{ display(item.details) }}</p><template v-if="item.status === 'open' && can('imports.approve')"><label>قرار المراجعة<textarea v-model="caseResolution[String(item.id)]" rows="2" /></label><button class="button secondary" :disabled="busy" @click="resolveCase(item)">حفظ قرار المراجعة</button></template><p v-else>{{ display(item.resolution) }}</p></div></div><div v-if="rowsOf(preview.decisions).length" class="review-actions"><h3>قرارات الدفعة</h3><ul><li v-for="decision in rowsOf(preview.decisions)" :key="String(decision.id)"><StatusBadge :value="decision.action" /> {{ display(decision.reviewer) }} · {{ display(decision.created_at) }}<p>{{ display(decision.reason) }}</p></li></ul></div><div v-if="can('imports.approve')" class="review-actions"><p class="notice warning">تحتاج الفروق والأسماء غير المحسومة إلى مراجعة هندسة العمليات. نجاح الفحص لا يعني اعتماد المصدر.</p><label>قرار المراجع وسببه<textarea v-model="reason" rows="3" minlength="10" /></label><button class="button primary" :disabled="busy" @click="approve">اعتماد القيم المحددة ({{ selectedIds.length }})</button><button class="button secondary" :disabled="busy" @click="reject">رفض جميع القيم المعلقة</button></div></div>
 </section></template>
 
 

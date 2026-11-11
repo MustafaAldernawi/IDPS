@@ -5,6 +5,7 @@ import { resources } from './lib/resources'
 import AnalyticsView from './components/AnalyticsView.vue'
 import ResourceView from './components/ResourceView.vue'
 import ImportsView from './components/ImportsView.vue'
+import ReportTranscriptions from './components/ReportTranscriptions.vue'
 import TrainingStudio from './components/TrainingStudio.vue'
 import AdminView from './components/AdminView.vue'
 import ReportsView from './components/ReportsView.vue'
@@ -23,6 +24,7 @@ const navigation = [
   ...resources,
   { key: 'engineering', title: 'المؤشرات والتحليل', subtitle: 'الفعلي والمستهدف والطاقة والفواقد ضمن نطاق معتمد', group: 'هندسة العمليات', icon: '⌁' },
   { key: 'imports', title: 'تكامل البيانات', subtitle: 'مصادر محفوظة وفحوص جودة واعتماد قابل للتتبع', group: 'البيانات والحوكمة', icon: '↥' },
+  { key: 'transcriptions', title: 'نسخ التقارير الممسوحة', subtitle: 'نسخ بشري من صفحات موثقة ومراجعة مستقلة', group: 'البيانات والحوكمة', icon: '▤' },
   { key: 'ai', title: 'استوديو التدريب والتوقع', subtitle: 'من نسخة البيانات إلى نموذج مرشح وقرار موثق', group: 'الذكاء الاصطناعي', icon: '✧' },
   { key: 'reports', title: 'التقارير والتصدير', subtitle: 'تقارير شهرية مرتبطة بالمصدر والفترة وحالة الاعتماد', group: 'البيانات والحوكمة', icon: '▧' },
   { key: 'admin', title: 'المستخدمون والمرجعيات', subtitle: 'إدارة الحسابات والأدوار ونطاق المرافق والوحدات', group: 'البيانات والحوكمة', icon: '⚙' },
@@ -37,6 +39,7 @@ const groups = ['الرئيسية', 'العمليات والتخطيط', 'هند
 provide('permissions', computed(() => user.value?.permissions ?? []))
 const permissionMap: Record<string, string[]> = { overview: ['engineering.read'], engineering: ['engineering.read'], production: ['production.write', 'production.read', 'engineering.read'], feed: ['production.write', 'production.read', 'engineering.read'], energy: ['production.write', 'engineering.read'], losses: ['production.write', 'engineering.read'], chemicals: ['production.write', 'engineering.read'], planning: ['planning.write', 'planning.read', 'engineering.read'], events: ['events.write', 'events.read', 'events.approve', 'engineering.read'], quality: ['quality.write', 'quality.read', 'engineering.read'], blending: ['quality.write', 'quality.read', 'engineering.read'], monthly: ['production.read'], audit: ['audit.read'], imports: ['imports.read', 'imports.write', 'imports.approve'], ai: ['ai.read', 'dataset.read', 'ai.train'], reports: ['reports.export'], admin: ['users.manage', 'catalogs.manage'] }
 permissionMap.definitions = ['engineering.read', 'production.approve', 'planning.approve']
+permissionMap.transcriptions = ['imports.read']
 permissionMap.annotations = ['engineering.read', 'production.approve']
 permissionMap.references = ['catalogs.read', 'quality.read', 'production.read', 'engineering.read']
 permissionMap['daily-readiness'] = ['engineering.read']
@@ -74,6 +77,7 @@ function navigate(key: string) { active.value = key; menuOpen.value = false }
         <AnalyticsView v-if="active === 'overview'" key="overview" :api="api" overview />
         <AnalyticsView v-else-if="active === 'engineering'" key="engineering" :api="api" />
         <ImportsView v-else-if="active === 'imports'" :api="api" />
+        <ReportTranscriptions v-else-if="active === 'transcriptions'" :api="api" :user-id="user.id" />
         <TrainingStudio v-else-if="active === 'ai'" :api="api" />
         <AdminView v-else-if="active === 'admin'" :api="api" />
         <ReportsView v-else-if="active === 'reports'" :api="api" />
