@@ -1,0 +1,9 @@
+<script setup lang="ts">
+import {onMounted,ref} from 'vue'
+import {ApiError,rowsOf,type Api,type Row} from '../lib/api'
+const props=defineProps<{api:Api}>(), rows=ref<Row[]>([]),reason=ref<Record<string,string>>({}),error=ref(''),success=ref(''),busy=ref(false)
+async function load(){error.value='';try{rows.value=rowsOf(await props.api('/alerts'))}catch(e){error.value=e instanceof ApiError?e.message:'تعذر تحميل التنبيهات'}}
+onMounted(load)
+async function acknowledge(row:Row){const id=String(row.id),value=reason.value[id]??'';if(value.trim().length<10){error.value='أدخل سبب المراجعة بعشرة أحرف على الأقل.';return}busy.value=true;error.value='';try{await props.api(`/alerts/${id}/acknowledge`,{method:'POST',body:{reason:value}});success.value='حُفظ إقرار التنبيه وسجل التدقيق.';await load()}catch(e){error.value=e instanceof ApiError?e.message:'تعذر تسجيل الإقرار'}finally{busy.value=false}}
+</script>
+<template><section><h2>تنبيهات التشغيل</h2><p>التنبيه يوثق الحدث المسجل ويعرض حالته؛ مستوى الخطر يتطلب تعريفًا معتمدًا.</p><p v-if="error" role="alert" class="notice danger">{{ error }}</p><p v-if="success" role="status">{{ success }}</p><button class="button secondary" @click="load">تحديث</button><div v-if="!rows.length" class="panel empty-state">لا توجد تنبيهات ضمن صلاحياتك.</div><article v-for="row in rows" :key="String(row.id)" class="panel"><h3>{{ row.message }}</h3><p>الحالة: {{ row.status === 'open' ? 'بانتظار المراجعة' : 'تم الإقرار' }} · المستوى: {{ row.severity === 'informational' ? 'معلوماتي' : row.severity }} · {{ row.created_at }}</p><form v-if="row.status === 'open'" @submit.prevent="acknowledge(row)"><label>سبب الإقرار<textarea v-model="reason[String(row.id)]" minlength="10" required /></label><button class="button primary" :disabled="busy">إقرار المراجعة</button></form><p v-else>{{ row.acknowledgment_reason }}</p></article></section></template>

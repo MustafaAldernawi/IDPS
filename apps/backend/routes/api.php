@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\AiMonitoringController;
+use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DailyReadinessController;
@@ -24,6 +25,8 @@ Route::prefix('v1')->group(function () {
         Route::get('catalogs/{catalog}', [CatalogController::class, 'index']);
         Route::post('catalogs/{catalog}', [CatalogController::class, 'store']);
         Route::get('audit-logs', [CatalogController::class, 'audit']);
+        Route::get('alerts', [AlertController::class, 'index']);
+        Route::post('alerts/{id}/acknowledge', [AlertController::class, 'acknowledge']);
         Route::get('references/{kind}', [DomainReferenceController::class, 'index']);
         Route::post('references/{kind}', [DomainReferenceController::class, 'store']);
         Route::post('references/{kind}/{id}/approve', [DomainReferenceController::class, 'approve']);

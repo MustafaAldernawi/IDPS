@@ -12,6 +12,7 @@ import DefinitionsView from './components/DefinitionsView.vue'
 import ReferencesView from './components/ReferencesView.vue'
 import DailyReadiness from './components/DailyReadiness.vue'
 import MonitoringView from './components/MonitoringView.vue'
+import AlertsView from './components/AlertsView.vue'
 import './style.css'
 
 const token = ref<string | null>(null), user = ref<User | null>(null), email = ref(''), password = ref(''), error = ref(''), busy = ref(false), active = ref('overview'), menuOpen = ref(false)
@@ -28,6 +29,7 @@ const navigation = [
   { key: 'references', title: 'الورديات والحالة والجودة', subtitle: 'تقويم العمل وحالة الوحدات ومواصفات الجودة المعتمدة', group: 'العمليات والتخطيط', icon: '◷' },
   { key: 'daily-readiness', title: 'جاهزية البيانات اليومية', subtitle: 'تغطية القياسات الفعلية وحالات النقص', group: 'البيانات والحوكمة', icon: '▤' },
   { key: 'model-monitoring', title: 'مراقبة النماذج', subtitle: 'التقييمات وسياسات إعادة التدريب المقيدة', group: 'الذكاء الاصطناعي', icon: '◉' },
+  { key: 'alerts', title: 'التنبيهات', subtitle: 'متابعة الأحداث المسجلة وإقرار مراجعتها', group: 'العمليات والتخطيط', icon: '◈' },
 ]
 const groups = ['الرئيسية', 'العمليات والتخطيط', 'هندسة العمليات', 'البيانات والحوكمة', 'الذكاء الاصطناعي']
 provide('permissions', computed(() => user.value?.permissions ?? []))
@@ -37,6 +39,7 @@ permissionMap.annotations = ['engineering.read', 'production.approve']
 permissionMap.references = ['catalogs.read', 'quality.read', 'production.read', 'engineering.read']
 permissionMap['daily-readiness'] = ['engineering.read']
 permissionMap['model-monitoring'] = ['ai.read']
+permissionMap.alerts = ['events.read','events.write','engineering.read']
 const visibleNavigation = computed(() => navigation.filter(item => user.value?.permissions.includes('*') || permissionMap[item.key]?.some(permission => user.value?.permissions.includes(permission))))
 const current = computed(() => navigation.find(item => item.key === active.value) ?? navigation[0]!)
 const resource = computed(() => resources.find(item => item.key === active.value))
@@ -75,6 +78,7 @@ function navigate(key: string) { active.value = key; menuOpen.value = false }
         <ReferencesView v-else-if="active === 'references'" :api="api" />
         <DailyReadiness v-else-if="active === 'daily-readiness'" :api="api" />
         <MonitoringView v-else-if="active === 'model-monitoring'" :api="api" />
+        <AlertsView v-else-if="active === 'alerts'" :api="api" />
         <ResourceView v-else-if="resource" :resource="resource" :api="api" />
       </main><footer class="workspace-footer"><span>IDPS — Integrated Data and Production System</span><span>مصفاة الزاوية · Africa/Tripoli</span></footer>
     </div>

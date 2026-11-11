@@ -25,6 +25,38 @@ tags:
   - name: Training
   - name: Jobs
 paths:
+  /alerts:
+    get:
+      tags: [Events]
+      summary: List facility and unit scoped operational alerts
+      parameters:
+        - {name: status, in: query, required: false, schema: {type: string, enum: [open, acknowledged]}}
+        - {name: facility_id, in: query, required: false, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Paginated alerts visible to the authenticated user's scope}
+        '401': {description: Authentication required}
+        '403': {description: Missing event or engineering permission}
+  /alerts/{alert_id}/acknowledge:
+    post:
+      tags: [Events]
+      summary: Acknowledge a visible alert with an auditable reason
+      parameters:
+        - {name: alert_id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 10, maxLength: 2000}
+      responses:
+        '200': {description: Acknowledged; same actor can safely replay}
+        '403': {description: Missing permission}
+        '404': {description: Alert not found within authorized scope}
+        '409': {description: Already acknowledged by another actor}
+        '422': {description: Invalid reason}
   /auth/me:
     get:
       tags: [Identity]

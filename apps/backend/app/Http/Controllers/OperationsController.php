@@ -262,6 +262,9 @@ class OperationsController extends Controller
             $id = (string) Str::uuid();
             $record = $data + ['id' => $id, 'payload_hash' => $hash, 'created_by' => $request->user()->id, 'status' => 'reported', 'revision_no' => 1, 'created_at' => now('UTC')->format('Y-m-d H:i:s.u'), 'updated_at' => now('UTC')->format('Y-m-d H:i:s.u')];
             DB::table('operational_events')->insert($record);
+            if ($data['kind'] === 'unplanned' && $data['event_type'] === 'trip') {
+                DB::table('alerts')->insert(['id' => (string) Str::uuid(), 'facility_id' => $data['facility_id'], 'unit_id' => $data['unit_id'], 'event_id' => $id, 'category' => 'trip_reported', 'severity' => 'informational', 'status' => 'open', 'message' => 'تم تسجيل توقف مفاجئ للوحدة؛ يحتاج إلى المتابعة والمراجعة.', 'created_at' => now('UTC')]);
+            }
             $this->eventRevision($request, $record, $data['reason']);
             Governance::audit($request, 'create', 'events', $id, null, $record, $data['reason']);
             $this->outbox('event:'.$id.':1', 'event.reported', ['event_id' => $id, 'revision_no' => 1, 'known_at' => $data['known_at']]);

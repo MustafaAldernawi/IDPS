@@ -123,3 +123,9 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Added explicit sheet selection for flat monthly XLSX files with `month` header, bounded workbook expansion and size, unknown-column rejection/review, separate mapping versions and worksheet/cell lineage. The legacy historical adapter remains selected when no flat sheet is specified.
 - MySQL synthetic CSV/XLSX mapping tests: 2 tests /18 assertions passed, including independent reviewer and replay idempotency. Python service/parser:17 tests passed; historical source parsing remains336 facts for each 2021–2023 year. `npm run check`:12 frontend tests, typecheck/lint/build passed.
 - This is monthly flat-sheet mapping, not arbitrary workbook interpretation, daily/shift dataset profiling, or engineering mapping signoff. Next: complete missing source workflows and daily ingestion, then approved-data evaluation and UAT/security gates.
+
+## Batch 11 — scoped trip alerts
+
+- A reported unplanned trip creates one informational alert in the same transaction as its event/outbox. Replaying the event does not duplicate it. Authorized scoped users can list and acknowledge with a reason and audit entry; other scopes cannot access it. No risk severity or target-risk threshold is invented.
+- Added Arabic alert view and OpenAPI descriptions. Local migration 180000 applied and runtime grants refreshed. Full MySQL backend suite: 42 tests /338 assertions; frontend lint/typecheck/build and 13 tests passed; blueprint/OpenAPI verification passed.
+- RF-077 remains partial: escalation, notification delivery and target-risk thresholds require approved definitions and further workflow. Next address source-controlled thresholds and other independent tasks in the readiness matrix; no external messages were sent.
