@@ -56,3 +56,5 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 - [x] Arabic reference interfaces for shifts/calendar/unit status/quality, with 8 frontend tests and build; owner UAT remains pending.
 - [x] Synthetic MySQL end-to-end workflow: 1 test /37 assertions; AI boundary mocked not_ready. Real approved-data UAT remains pending.
 - [x] Isolated DB/files restore consistency checks: 12 real source hashes and one synthetic model artifact, plus missing-file negative tests; alternate-environment path mapping remains pending.
+- [x] Daily data coverage API/UI, guarded source mapping API, model evaluation and governed scheduled candidate checks; technical tests documented in Batch 7.
+- [ ] Integrate mapping dictionary with importer and review UI; expose model monitoring policies and evaluations in UI; complete approved-data scientific validation and UAT.

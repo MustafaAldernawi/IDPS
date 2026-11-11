@@ -96,3 +96,11 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 
 - `scripts/local-verify-restore.ps1` cross-checked isolated MySQL and isolated file restore: 12/12 actual source hashes matched. No model rows existed in that backup; an isolated synthetic model/artifact/approval fixture then verified 1/1. Empty restore directory negative tests correctly detected missing sources and model and returned failure.
 - Restored database paths still refer to original storage paths; the checker does not rewrite them. A usable alternate environment requires explicit, controlled path mapping and a quiesced consistent backup pair. No original files or existing databases deleted.
+
+## Batch 7 — daily readiness, source mapping foundation and AI monitoring
+
+- Daily readiness API/UI reports approved full-day observations, zero versus missing and missing dates; monthly totals and individual shifts are not treated as complete days. Coverage alone remains DAILY_MODEL_NOT_READY.
+- Added versioned source mapping review API with scope/unit/granularity, independent approval and unresolved queue. CSV parser rejects unknown headers rather than silently discarding them. Connecting approved mappings and unresolved queue to the importer and UI remains incomplete; do not mark RF-015 done.
+- Added forecast-versus-approved-actual evaluations, monthly candidate retraining policies and conservative monitoring. One earliest-as-of forecast per month is counted; mixed engine/model scope returns ambiguous_scope until filtered. A sample minimum of 12 is a configurable technical floor, not an approved scientific threshold; drift remains unclaimed without a signed threshold.
+- MySQL migrations 160000/170000 applied locally and scoped grants refreshed. `php vendor/bin/phpunit --do-not-cache-result`: 39 tests /309 assertions; Python service/parser16 tests; frontend npm check10 tests and build. All on local/test only.
+- Next: integrate approved source dictionary with CSV/XLSX importer and reviewer interface, expose retraining/monitoring UI, then full real queue/restore/E2E, security and remaining readiness matrix gaps. No engineering or model approval inferred.

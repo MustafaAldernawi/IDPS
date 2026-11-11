@@ -1,11 +1,15 @@
 <?php
 
 use App\Http\Controllers\AiController;
+use App\Http\Controllers\AiMonitoringController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\DailyReadinessController;
+use App\Http\Controllers\DomainReferenceController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\OperationsController;
+use App\Http\Controllers\SourceMappingController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\ApiIdentity;
 use App\Services\EngineeringService;
@@ -20,20 +24,25 @@ Route::prefix('v1')->group(function () {
         Route::get('catalogs/{catalog}', [CatalogController::class, 'index']);
         Route::post('catalogs/{catalog}', [CatalogController::class, 'store']);
         Route::get('audit-logs', [CatalogController::class, 'audit']);
-        Route::get('references/{kind}', [\App\Http\Controllers\DomainReferenceController::class, 'index']);
-        Route::post('references/{kind}', [\App\Http\Controllers\DomainReferenceController::class, 'store']);
-        Route::post('references/{kind}/{id}/approve', [\App\Http\Controllers\DomainReferenceController::class, 'approve']);
-        Route::get('quality-samples/{id}/conformance', [\App\Http\Controllers\DomainReferenceController::class, 'conformance']);
-        Route::get('unit-status/downtime', [\App\Http\Controllers\DomainReferenceController::class, 'downtime']);
+        Route::get('references/{kind}', [DomainReferenceController::class, 'index']);
+        Route::post('references/{kind}', [DomainReferenceController::class, 'store']);
+        Route::post('references/{kind}/{id}/approve', [DomainReferenceController::class, 'approve']);
+        Route::get('quality-samples/{id}/conformance', [DomainReferenceController::class, 'conformance']);
+        Route::get('unit-status/downtime', [DomainReferenceController::class, 'downtime']);
         Route::get('users', [UserController::class, 'index']);
         Route::post('users', [UserController::class, 'store']);
         Route::post('users/{id}/roles', [UserController::class, 'assignRole']);
         Route::get('imports', [ImportController::class, 'index']);
+        Route::post('source-mappings/inspect', [SourceMappingController::class, 'inspect']);
+        Route::get('source-mappings/unresolved', [SourceMappingController::class, 'unresolved']);
+        Route::post('source-mappings/proposals', [SourceMappingController::class, 'propose']);
+        Route::post('source-mappings/proposals/{id}/approve', [SourceMappingController::class, 'approve']);
         Route::post('imports', [ImportController::class, 'store']);
         Route::get('imports/{id}/preview', [ImportController::class, 'preview']);
         Route::post('imports/{id}/approve', [ImportController::class, 'approve']);
         Route::post('reconciliation-cases/{id}/resolve', [ImportController::class, 'resolve']);
         Route::get('monthly-observations', [ImportController::class, 'observations']);
+        Route::get('data/readiness/daily', DailyReadinessController::class);
         Route::post('monthly-observations/{id}/revise', [ImportController::class, 'revise']);
         Route::prefix('ai')->controller(AiController::class)->group(function () {
             Route::get('datasets', 'datasets');
@@ -47,6 +56,12 @@ Route::prefix('v1')->group(function () {
             Route::post('forecasts', 'forecast');
             Route::post('retrain', 'retrain');
         });
+        Route::post('ai/forecasts/{id}/evaluate', [AiMonitoringController::class, 'evaluate']);
+        Route::get('ai/evaluations', [AiMonitoringController::class, 'evaluations']);
+        Route::get('ai/monitoring', [AiMonitoringController::class, 'monitoring']);
+        Route::get('ai/retraining-policies', [AiMonitoringController::class, 'policies']);
+        Route::post('ai/retraining-policies', [AiMonitoringController::class, 'savePolicy']);
+        Route::get('ai/retraining-checks', [AiMonitoringController::class, 'checks']);
         Route::get('dashboard', [EngineeringService::class, 'dashboard']);
         Route::get('kpis', [EngineeringService::class, 'kpis']);
         Route::get('engineering/kpi-definitions', [EngineeringService::class, 'definitions']);
@@ -59,6 +74,6 @@ Route::prefix('v1')->group(function () {
         Route::get('comparisons/actual-target', [EngineeringService::class, 'comparison']);
         Route::get('{resource}', [OperationsController::class, 'index'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');
         Route::post('{resource}', [OperationsController::class, 'store'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');
-        Route::post('{resource}/{id}/{action}',[OperationsController::class, 'transition'])->where('resource','production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');
+        Route::post('{resource}/{id}/{action}', [OperationsController::class, 'transition'])->where('resource', 'production-records|crude-feed-records|energy-records|loss-records|chemical-records|quality-samples|blend-batches|plans|events');
     });
 });

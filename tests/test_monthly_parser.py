@@ -22,3 +22,16 @@ def test_monthly_parser_rejects_duplicate_period_and_nonfinite(tmp_path):
     with pytest.raises(ValueError): parser.parse(p)
     p.write_text('month,product_diesel_actual_t\n2026-01,1\n2026-01,2\n')
     with pytest.raises(ValueError,match='duplicate'): parser.parse(p)
+
+def test_unknown_header_requires_approved_mapping_and_keeps_original_locator(tmp_path):
+    p=tmp_path/'input.csv'
+    p.write_text('month,period_granularity,زيت ديزل\n2026-01,month,12.25\n',encoding='utf-8')
+    assert parser.unknown_headers(p)==['زيت ديزل']
+    with pytest.raises(ValueError,match='unmapped'):
+        parser.parse(p)
+    result=parser.parse(p,alias_map={'زيت ديزل':'product_diesel_actual_t'})
+    assert result[0]['item_code']=='DIESEL'
+    assert result[0]['quantity']=='12.250000'
+    assert result[0]['locator']['column']=='زيت ديزل'
+    with pytest.raises(ValueError,match='unmapped'):
+        parser.parse(p,alias_map={'زيت ديزل':'unrecognized_field'})

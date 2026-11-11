@@ -39,23 +39,49 @@ def fact(period,field,value,locator,flags=None):
     if metric=='loss' and value=='0.000000': warnings.append('zero_meter_status_unknown')
     return dict(period_month=period,metric_code=metric,item_code=item,actual_or_target=measure,report_status='actual',quantity=value,original_quantity=original,unit_code='t',locator=locator,qa_flags=warnings)
 
-def parse(path,year=None):
+METADATA_FIELDS = {'month','period_granularity','period_status','source_file','actual_sheet','target_sheet','qa_flags'}
+
+def unknown_headers(path):
+    with Path(path).open(encoding='utf-8-sig',newline='') as stream:
+        headers=next(csv.reader(stream),None)
+    if not headers or 'month' not in headers: raise ValueError('month column required')
+    if len(headers)>256 or len(set(headers))!=len(headers) or any(not header.strip() for header in headers):
+        raise ValueError('invalid or duplicate CSV headers')
+    return [header for header in headers if header not in FIELDS and header not in METADATA_FIELDS]
+
+def parse(path,year=None,alias_map=None):
     path=Path(path)
     if path.stat().st_size>10*1024*1024: raise ValueError('file too large')
     output=[]
     if path.suffix.lower()=='.csv':
+        unknown=unknown_headers(path)
+        alias_map=alias_map or {}
+        if set(unknown)!=set(alias_map) or any((target.get('field') if isinstance(target,dict) else target) not in FIELDS for target in alias_map.values()):
+            raise ValueError('unmapped CSV header')
+        with path.open(encoding='utf-8-sig',newline='') as stream:
+            headers=next(csv.reader(stream))
+        targets=[(alias_map[header].get('field') if isinstance(alias_map.get(header),dict) else alias_map.get(header,header)) for header in headers if header in FIELDS or header in alias_map]
+        if len(targets)!=len(set(targets)): raise ValueError('duplicate mapped field')
         with path.open(encoding='utf-8-sig',newline='') as stream:
             reader=csv.DictReader(stream); seen=set()
             if not reader.fieldnames or 'month' not in reader.fieldnames: raise ValueError('month column required')
             for line,row in enumerate(reader,2):
                 if line>10002: raise ValueError('too many rows')
+                if None in row: raise ValueError('unexpected extra CSV fields')
                 if row.get('period_granularity','month') not in ['month','monthly']: raise ValueError('monthly granularity required')
                 if row.get('period_status','actual')!='actual': raise ValueError('annual/cumulative/semi-actual requires separate contract')
                 period=row['month']
                 if period in seen: raise ValueError('duplicate month')
                 seen.add(period)
                 for field in reader.fieldnames:
-                    if field in FIELDS: output.append(fact(period,field,quantity(row[field]),{'row':line,'column':field},[row['qa_flags']] if row.get('qa_flags') else []))
+                    mapping=alias_map.get(field,field)
+                    target=mapping.get('field') if isinstance(mapping,dict) else mapping
+                    if target in FIELDS:
+                        observation=fact(period,target,quantity(row[field]),{'row':line,'column':field},[row['qa_flags']] if row.get('qa_flags') else [])
+                        if isinstance(mapping,dict):
+                            if mapping.get('report_status') not in ('actual','semi_actual') or not mapping.get('mapping_id'): raise ValueError('invalid approved mapping')
+                            observation['report_status']=mapping['report_status'];observation['mapping_version_id']=mapping['mapping_id']
+                        output.append(observation)
     elif path.suffix.lower()=='.xlsx':
         import openpyxl
         with zipfile.ZipFile(path) as archive:
@@ -95,6 +121,12 @@ def parse(path,year=None):
 
 if __name__=='__main__':
     try:
-        print(json.dumps(parse(sys.argv[1],int(sys.argv[2]) if len(sys.argv)>2 else None),ensure_ascii=True,separators=(',',':')))
+        import argparse
+        arguments=argparse.ArgumentParser()
+        arguments.add_argument('path');arguments.add_argument('year',nargs='?',type=int)
+        arguments.add_argument('--inspect',action='store_true');arguments.add_argument('--mapping-stdin',action='store_true')
+        args=arguments.parse_args()
+        result=unknown_headers(args.path) if args.inspect else parse(args.path,args.year,json.load(sys.stdin) if args.mapping_stdin else None)
+        print(json.dumps(result,ensure_ascii=True,separators=(',',':')))
     except (ValueError,KeyError,zipfile.BadZipFile) as error:
         print(json.dumps({'error':str(error)}));sys.exit(2)

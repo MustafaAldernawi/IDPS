@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\EligibleRetraining;
 use App\Jobs\ReforecastEvent;
 use App\Models\User;
 use App\Services\Governance;
@@ -78,3 +79,4 @@ Artisan::command('idps:process-outbox', function () {
     $this->info('Queued '.$count.' durable outbox entries; workers enforce idempotency.');
 });
 Schedule::command('idps:process-outbox')->everyMinute()->withoutOverlapping();
+Schedule::job(new EligibleRetraining)->monthlyOn(2, '02:00')->timezone('Africa/Tripoli')->withoutOverlapping();
