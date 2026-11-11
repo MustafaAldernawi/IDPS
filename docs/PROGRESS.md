@@ -129,3 +129,10 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - A reported unplanned trip creates one informational alert in the same transaction as its event/outbox. Replaying the event does not duplicate it. Authorized scoped users can list and acknowledge with a reason and audit entry; other scopes cannot access it. No risk severity or target-risk threshold is invented.
 - Added Arabic alert view and OpenAPI descriptions. Local migration 180000 applied and runtime grants refreshed. Full MySQL backend suite: 42 tests /338 assertions; frontend lint/typecheck/build and 13 tests passed; blueprint/OpenAPI verification passed.
 - RF-077 remains partial: escalation, notification delivery and target-risk thresholds require approved definitions and further workflow. Next address source-controlled thresholds and other independent tasks in the readiness matrix; no external messages were sent.
+
+## Batch 12 — chemical target and monthly variance
+
+- Added separate monthly planning target drafts, independent approval, scoped permissions, audit, unique approved scopes and immutable revision history. Approved targets and approved full-month actuals are compared by exact facility/unit/month/chemical/measurement unit; missing or multiple actuals yield no variance. No engineering threshold or norm is inferred. Arabic UI supports entry, approval and review. Migration 190000 applied to local MySQL and runtime privileges refreshed.
+- MySQL regression before the final additional mismatched-unit assertion: 43 tests /353 assertions passed; focused regression including that assertion: 1 test /19 assertions passed. Frontend `npm run check`: 14 tests, lint, type checking and production build passed. `python scripts/verify_blueprint.py` passed.
+- RF-026/RF-048 remain partial: owner-approved norms and versioned alert thresholds, UAT, and approved daily/shift aggregation rules are not supplied. No real data or model was approved.
+- Next: continue independent readiness gaps including versioned reviewed thresholds, reports and remaining source ingestion workflows; preserve all blocked engineering choices.

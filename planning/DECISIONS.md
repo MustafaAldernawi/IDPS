@@ -43,3 +43,7 @@
 | ADR-018 | Use **actual monthly 2021–2023, 36 x 35 provisional** as first research-grade dataset, not daily proxy | APPROVED IN DESIGN | Historical reviewer must sign before operational activation |
 | ADR-019 | Consolidate 2021–2023 audit, 2024 annual/2025 cumulative context, refinery crude assays and nonproduction AI research in unified IDPS V1.2 | APPROVED IN DESIGN | Do not turn cumulative into monthly records |
 | ADR-020 | Stage/review new months, then governed periodic retraining; preserve gaps and audit revisions | APPROVED IN DESIGN | ML promotion remains gated |
+
+## Implementation decision — chemical variance, 2026-11-11
+
+Chemical planning targets are independent, individually approved monthly records; a revision supersedes the prior target only after independent approval. Compare only approved monthly actuals in exactly the same facility, operational unit, month, chemical and measurement unit. Multiple monthly actuals are ambiguous and daily/shift entries are not implicitly aggregated. Missing and zero remain distinct. No engineering thresholds or normative targets are invented; their definition and departmental acceptance remain open. A future aggregation method requires an approved engineering definition.

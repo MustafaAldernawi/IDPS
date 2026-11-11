@@ -5,6 +5,7 @@ use App\Http\Controllers\AiMonitoringController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\ChemicalVarianceController;
 use App\Http\Controllers\DailyReadinessController;
 use App\Http\Controllers\DomainReferenceController;
 use App\Http\Controllers\HealthController;
@@ -69,6 +70,10 @@ Route::prefix('v1')->group(function () {
         Route::get('dashboard', [EngineeringService::class, 'dashboard']);
         Route::get('kpis', [EngineeringService::class, 'kpis']);
         Route::get('engineering/kpi-definitions', [EngineeringService::class, 'definitions']);
+        Route::get('chemical-targets', [ChemicalVarianceController::class, 'index']);
+        Route::post('chemical-targets', [ChemicalVarianceController::class, 'store']);
+        Route::post('chemical-targets/{id}/approve', [ChemicalVarianceController::class, 'approve']);
+        Route::get('engineering/chemical-variance', [ChemicalVarianceController::class, 'report']);
         Route::post('engineering/kpi-definitions', [EngineeringService::class, 'storeDefinition']);
         Route::post('engineering/kpi-definitions/{id}/approve', [EngineeringService::class, 'approveDefinition']);
         Route::get('engineering/annotations', [EngineeringService::class, 'annotations']);

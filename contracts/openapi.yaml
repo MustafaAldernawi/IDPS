@@ -25,6 +25,67 @@ tags:
   - name: Training
   - name: Jobs
 paths:
+  /chemical-targets:
+    get:
+      tags: [Plans]
+      summary: List chemical planning targets visible to the user's scope
+      responses:
+        '200': {description: Target revisions and approval status}
+        '403': {description: Planning read permission required}
+    post:
+      tags: [Plans]
+      summary: Create a draft chemical target or a revision of an approved target
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [facility_id, period_month, chemical_code, unit_code, quantity, source_reference, available_at]
+              properties:
+                facility_id: {type: string, format: uuid}
+                unit_id: {type: [string, 'null'], format: uuid}
+                period_month: {type: string, example: '2026-01'}
+                chemical_code: {type: string, maxLength: 64}
+                unit_code: {type: string}
+                quantity: {type: string, pattern: '^\d{1,14}(\.\d{1,6})?$'}
+                source_reference: {type: string, maxLength: 500}
+                available_at: {type: string, format: date-time}
+                replaces_id: {type: [string, 'null'], format: uuid}
+      responses:
+        '201': {description: Draft created; not approved}
+        '403': {description: Planning write permission required for the scope}
+        '422': {description: Invalid value or revision scope}
+  /chemical-targets/{id}/approve:
+    post:
+      tags: [Plans]
+      summary: Independently approve a target or revision with an audit reason
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, maxLength: 2000}
+      responses:
+        '200': {description: Approved and previous revision superseded atomically}
+        '403': {description: Approval permission or independence requirement failed}
+        '409': {description: Target or predecessor is no longer in the expected state}
+        '422': {description: Invalid reason or duplicate approved scope}
+  /engineering/chemical-variance:
+    get:
+      tags: [KPIs]
+      summary: Compare approved monthly chemical quantities in exactly matching scopes and units
+      parameters:
+        - {name: facility_id, in: query, required: true, schema: {type: string, format: uuid}}
+        - {name: period_month, in: query, required: true, schema: {type: string, example: '2026-01'}}
+      responses:
+        '200': {description: Values and valid, missing_target, missing_actual or ambiguous_actual status; variance is null when unavailable}
+        '403': {description: Engineering read permission required}
   /alerts:
     get:
       tags: [Events]
