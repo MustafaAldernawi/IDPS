@@ -389,16 +389,38 @@ class EngineeringService
         $this->authorize($request);
         $request->validate(['period_month' => 'required|date_format:Y-m', 'facility_id' => 'required|uuid|exists:facilities,id', 'unit_id' => 'nullable|uuid|exists:refinery_units,id', 'format' => ['sometimes', Rule::in(['csv', 'xlsx', 'pdf', 'html', 'json'])]]);
         $this->authorizeScope($request, 'reports.export', $request->input('facility_id'), $request->input('unit_id'));
-        $snapshot = ['period_month' => $request->input('period_month'), 'facility_id' => $request->input('facility_id'), 'unit_id' => $request->input('unit_id'), 'generated_at' => now('UTC')->toIso8601String(), 'source_status' => 'approved_only', 'comparisons' => $this->comparison($request)->getData(true)['data'], 'kpis' => $this->kpis($request)->getData(true)['data'], 'annotations' => OperationsController::scoped(DB::table('engineering_annotations'), $request, 'engineering.read')->where('facility_id', $request->input('facility_id'))->where('unit_id', $request->input('unit_id'))->where('period_month', $request->input('period_month'))->where('status', 'approved')->get()->all()];
+        $snapshot = DB::transaction(function () use ($request): array {
+            $snapshot = [
+                'period_month' => $request->input('period_month'),
+                'facility_id' => $request->input('facility_id'),
+                'unit_id' => $request->input('unit_id'),
+                'generated_at' => now('UTC')->toIso8601String(),
+                'source_status' => 'approved_only',
+                'comparisons' => $this->comparison($request)->getData(true)['data'],
+                'kpis' => $this->kpis($request)->getData(true)['data'],
+                'annotations' => OperationsController::scoped(DB::table('engineering_annotations'), $request, 'engineering.read')
+                    ->where('facility_id', $request->input('facility_id'))
+                    ->where('unit_id', $request->input('unit_id'))
+                    ->where('period_month', $request->input('period_month'))
+                    ->where('status', 'approved')->get()->all(),
+            ];
+            $snapshot['sources'] = $this->reportSources($request, $snapshot);
+
+            return $snapshot;
+        });
         $rows = [['section', 'period_month', 'product_or_kpi', 'actual', 'target', 'value', 'unit', 'status', 'source_reference']];
+        $rows[] = ['report_scope', $snapshot['period_month'], '', null, null, $snapshot['generated_at'], '', $snapshot['source_status'], 'facility='.$snapshot['facility_id'].'; unit='.($snapshot['unit_id'] ?? 'facility')];
         foreach ($snapshot['comparisons'] as $row) {
-            $rows[] = ['comparison', $snapshot['period_month'], $row['product_code'], $row['actual'], $row['target'], $row['achievement_pct'], $row['unit_code'], $row['status'], json_encode($row['source_observation_ids'] ?? ['plan_id' => $row['plan_id'] ?? null], JSON_THROW_ON_ERROR)];
+            $rows[] = ['comparison', $snapshot['period_month'], $row['product_code'], $row['actual'], $row['target'], $row['achievement_pct'], $row['unit_code'], $row['status'], json_encode(['observations' => $row['source_observation_ids'] ?? [], 'plan_id' => $row['plan_id'] ?? null], JSON_THROW_ON_ERROR)];
         }
         foreach ($snapshot['kpis'] as $row) {
             $rows[] = ['kpi', $snapshot['period_month'], $row['code'], $row['actual'] ?? null, $row['target'] ?? null, $row['value'], $row['unit'], $row['status'], $row['definition_id'] ?? $row['reason'] ?? ''];
         }
         foreach ($snapshot['annotations'] as $row) {
             $rows[] = ['annotation', $snapshot['period_month'], $row->title, null, null, $row->analysis, '', $row->status, $row->source_reference];
+        }
+        foreach ($snapshot['sources'] as $source) {
+            $rows[] = [$source['type'], $snapshot['period_month'], $source['item'], null, null, $source['approved_at'], '', $source['status'], $source['reference'].' | '.$source['id'].' | revision '.$source['revision']];
         }
         $format = $request->input('format', 'csv');
         $html = $this->reportHtml($snapshot, $rows);
@@ -415,6 +437,27 @@ class EngineeringService
         });
 
         return response($body, 200, ['Content-Type' => $contentType, 'Content-Disposition' => ($format === 'html' ? 'inline' : 'attachment').'; filename="IDPS-'.$snapshot['period_month'].'.'.$format.'"', 'X-Report-ID' => $id, 'Cache-Control' => 'private, no-store']);
+    }
+
+    private function reportSources(Request $request, array $snapshot): array
+    {
+        $observations = array_values(array_unique(array_merge([], ...array_column($snapshot['comparisons'], 'source_observation_ids'))));
+        $plans = array_values(array_unique(array_filter(array_column($snapshot['comparisons'], 'plan_id'))));
+        $sources = [];
+        foreach ($this->monthlyFacts($request)->whereIn('monthly_observations.id', $observations)
+            ->join('source_files', 'source_files.id', '=', 'monthly_observations.source_file_id')
+            ->join('import_rows', 'import_rows.id', '=', 'monthly_observations.import_row_id')
+            ->orderBy('monthly_observations.id')->get(['monthly_observations.*', 'source_files.original_name', 'source_files.sha256', 'import_rows.source_locator']) as $row) {
+            $sources[] = ['type' => 'import_source', 'item' => $row->item_code, 'id' => $row->id, 'reference' => $row->original_name.' | '.$row->source_locator.' | SHA256 '.$row->sha256, 'status' => $row->status, 'revision' => $row->revision_no, 'approved_at' => $row->approved_at];
+        }
+        foreach ($this->facts('production_target_plans', $request)->whereIn('id', $plans)->orderBy('id')->get() as $row) {
+            $sources[] = ['type' => 'target_plan_source', 'item' => $row->title, 'id' => $row->id, 'reference' => $row->source_reference, 'status' => $row->status, 'revision' => $row->revision_no, 'approved_at' => $row->approved_at];
+        }
+        foreach ($this->facts('production_records', $request)->where('period_month', $snapshot['period_month'])->orderBy('id')->get() as $row) {
+            $sources[] = ['type' => 'production_source', 'item' => $row->product_id, 'id' => $row->id, 'reference' => $row->source_reference, 'status' => $row->status, 'revision' => $row->revision_no, 'approved_at' => $row->approved_at];
+        }
+
+        return $sources;
     }
 
     private function mergeMonthlyComparison(Request $request, string $period, array $data): array

@@ -158,6 +158,12 @@ class OperationsTest extends TestCase
         $this->actingAs($manager)->postJson("/test-operations/plans/$plan/approve", ['reason' => 'Synthetic independent review'])->assertOk();
         $this->getJson('/test-comparison?facility_id='.$facility.'&period_month=2026-01')->assertOk()->assertJsonPath('data.0.achievement_pct', '79.944687')->assertJsonPath('data.0.target', '132339.000000');
         $this->getJson('/test-kpis?facility_id='.$facility.'&period_month=2026-01&product_id='.$product)->assertOk()->assertJsonPath('data.0.value', '79.944687')->assertJsonPath('data.1.status', 'definition_pending');
+        $report = $this->getJson('/test-reports/monthly?facility_id='.$facility.'&period_month=2026-01&format=json')->assertOk();
+        $report->assertJsonPath('sources.0.id', $plan)
+            ->assertJsonPath('sources.0.reference', 'synthetic:plan')
+            ->assertJsonPath('sources.0.status', 'approved')
+            ->assertJsonPath('sources.1.id', $prod)
+            ->assertJsonPath('sources.1.status', 'approved');
         $conflict = $this->actingAs($planner)->postJson('/test-operations/plans', $planPayload)->assertCreated()->json('data.id');
         $this->postJson("/test-operations/plans/$conflict/submit")->assertOk();
         $this->actingAs($manager)->postJson("/test-operations/plans/$conflict/approve", ['reason' => 'Synthetic duplicate conflict'])->assertConflict();
