@@ -160,3 +160,6 @@ Dashboard shows permission-scoped Laravel register totals, explicitly separate f
 
 ## Batch 17 — operational revisions and search
 Draft and rejected revisions preserve lineage and require author permission; approved records stay effective until a replacement is independently approved. Added scoped reference and ID search (plan titles also searchable). MySQL OperationsTest: 10 tests / 99 assertions; frontend npm run check: 14 tests, lint, types and build. Next: revision timeline, planning-specific lifecycle acceptance and dashboard scope.
+
+## Batch 18 — approval history, planning lifecycle and scoped dashboard
+Production, crude and plans expose scope-filtered revision and decision history. Planning replacement lifecycle verified through the public API, including retained active predecessor after rejection. Dashboard separates all-time scoped counts from monthly status distribution and shows approved comparisons, six-month product trends and selected-unit approved downtime. No engineering definitions changed. MySQL: 48 tests /438 assertions; frontend: 15 tests, lint, types and build. No visual QA. Next: remaining catalog lifecycle and report acceptance per readiness matrix.

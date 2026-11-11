@@ -187,14 +187,77 @@ class EngineeringService
     public function dashboard(Request $request): JsonResponse
     {
         $this->authorize($request);
+        $request->validate(['period_month' => 'sometimes|date_format:Y-m', 'facility_id' => 'sometimes|uuid', 'unit_id' => 'sometimes|uuid', 'product_id' => 'sometimes|uuid']);
+        $month = $request->input('period_month', now('Africa/Tripoli')->format('Y-m'));
+        $start = CarbonImmutable::parse($month.'-01', 'Africa/Tripoli');
+        $from = $start->utc();
+        $until = $start->addMonth()->utc();
         $counts = [];
-        foreach (['production_records', 'production_target_plans', 'operational_events', 'laboratory_samples'] as $table) {
+        $periodCounts = [];
+        $scoped = function (string $table) use ($request): Builder {
             $query = OperationsController::scoped(DB::table($table), $request, 'engineering.read');
-            $counts[$table] = ['total' => (clone $query)->count(), 'approved' => (clone $query)->whereIn('status', ['approved', 'acknowledged', 'closed'])->count()];
+            foreach (['facility_id', 'unit_id'] as $field) {
+                if ($request->filled($field)) {
+                    $query->where($field, $request->input($field));
+                }
+            }
+            return $query;
+        };
+        foreach (['production_records', 'production_target_plans', 'operational_events', 'laboratory_samples'] as $table) {
+            $query = $scoped($table);
+            $counts[$table] = [
+                'total' => (clone $query)->count(),
+                'approved' => (clone $query)->whereIn('status', ['approved', 'acknowledged', 'closed'])->count(),
+            ];
+            $periodQuery = $table === 'operational_events'
+                ? $query->where('started_at', '>=', $from)->where('started_at', '<', $until)
+                : $query->where('period_month', $month);
+            $periodCounts[$table] = $periodQuery->select('status')->selectRaw('COUNT(*) AS total')->groupBy('status')->pluck('total', 'status');
         }
-        $events = OperationsController::scoped(DB::table('operational_events'), $request, 'engineering.read')->whereNotIn('status', ['closed', 'cancelled'])->orderByDesc('started_at')->limit(10)->get();
+        $events = $scoped('operational_events')->where('started_at', '<', $until)
+            ->where(fn ($q) => $q->where('started_at', '>=', $from)
+                ->orWhere('actual_end_at', '>', $from)
+                ->orWhere(fn ($open) => $open->whereNull('actual_end_at')->whereNotIn('status', ['closed', 'cancelled'])))
+            ->orderByDesc('started_at')->limit(10)->get();
 
-        return response()->json(['data' => ['counts' => $counts, 'kpis' => $this->kpis($request)->getData(true)['data'], 'open_events' => $events, 'data_status' => 'approved_only', 'as_of' => now('UTC')->toIso8601String(), 'notice' => 'Historical imports remain provisional until an independent review. No live plant connection.']]);
+        $comparison = $this->comparison($request)->getData(true)['data'];
+        $trend = [];
+        if ($request->filled('product_id')) {
+            for ($offset = 5; $offset > 0; $offset--) {
+                $trendRequest = $request->duplicate(array_replace($request->query(), [
+                    'period_month' => $start->subMonths($offset)->format('Y-m'),
+                ]));
+                array_push($trend, ...$this->comparison($trendRequest)->getData(true)['data']);
+            }
+            array_push($trend, ...$comparison);
+        }
+        $downtime = null;
+        $cutoff = $until->min(CarbonImmutable::now('UTC'));
+        if ($request->filled('unit_id') && $cutoff->gt($from)) {
+            $intervals = $scoped('unit_status_intervals')->where('status', 'approved')
+                ->whereIn('state', ['trip', 'maintenance', 'shutdown'])
+                ->where('known_at', '<=', $cutoff)->where('approved_at', '<=', $cutoff)
+                ->where('started_at', '<', $cutoff)
+                ->where(fn ($q) => $q->whereNull('ended_at')->orWhere('ended_at', '>', $from))
+                ->get(['started_at', 'ended_at as actual_end_at']);
+            if ($intervals->isNotEmpty()) {
+                $downtime = self::downtimeSeconds($intervals->map(fn ($row) => (array) $row)->all(), $from->toIso8601String(), $cutoff->toIso8601String());
+            }
+        }
+
+        return response()->json(['data' => [
+            'counts' => $counts,
+            'period_counts' => $periodCounts,
+            'period_month' => $month,
+            'kpis' => $this->kpis($request)->getData(true)['data'],
+            'comparisons' => $comparison,
+            'trend' => $trend,
+            'events' => $events,
+            'open_events' => $events->whereNotIn('status', ['closed', 'cancelled'])->values(),
+            'downtime_seconds' => $downtime,
+            'data_status' => 'approved_only',
+            'as_of' => now('UTC')->toIso8601String(),
+        ]]);
     }
 
     public function definitions(Request $request): JsonResponse
