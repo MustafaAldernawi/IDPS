@@ -24,8 +24,17 @@ class HistoricalImporter
         abort_unless(hash_file('sha256', $destination) === $sha, 409, 'Source fingerprint mismatch');
         $aliasMap = [];
         $mappingVersion = 'monthly-v1';
-        if ($extension === 'csv') {
-            $inspection = new Process([env('IDPS_PYTHON', 'python'), '-B', base_path('../../scripts/parse_monthly.py'), $destination, '--inspect'], base_path('../..'), timeout: 45);
+        $flatSheet = $request->input('flat_sheet');
+        abort_if($flatSheet && $extension !== 'xlsx', 422, 'Sheet selection applies only to XLSX');
+        if ($flatSheet) {
+            $mappingVersion = 'monthly-v1-'.substr(hash('sha256', $flatSheet), 0, 12);
+        }
+        if ($extension === 'csv' || $flatSheet) {
+            $inspectCommand = [env('IDPS_PYTHON', 'python'), '-B', base_path('../../scripts/parse_monthly.py'), $destination, '--inspect'];
+            if ($flatSheet) {
+                array_push($inspectCommand, '--flat-sheet', $flatSheet);
+            }
+            $inspection = new Process($inspectCommand, base_path('../..'), timeout: 45);
             $inspection->run();
             if (! $inspection->isSuccessful()) {
                 throw ValidationException::withMessages(['file' => 'CSV header inspection failed']);
@@ -35,6 +44,7 @@ class HistoricalImporter
                 $context = $request->input('mapping_context', []);
                 $byAlias = collect($context)->keyBy('alias');
                 abort_unless($byAlias->count() === count($unknown) && collect($unknown)->every(fn ($alias) => $byAlias->has($alias)), 422, 'Explicit mapping context required for each unknown column');
+                abort_if($flatSheet && collect($context)->contains(fn ($entry) => $entry['source_scope'] !== $flatSheet || ($entry['locator']['sheet'] ?? null) !== $flatSheet), 422, 'Mapping context must match the selected sheet');
                 DB::table('source_files')->insertOrIgnore(['id' => (string) Str::uuid(), 'sha256' => $sha, 'original_name' => basename($originalName), 'storage_path' => $destination, 'bytes' => filesize($path), 'created_at' => now()]);
                 $source = DB::table('source_files')->where('sha256', $sha)->first();
                 $mapped = app(SourceMappingDictionary::class)->inspect($request, ['facility_id' => $facility, 'source_file_id' => $source->id, 'entries' => collect($unknown)->map(fn ($alias) => $byAlias->get($alias))->all()]);
@@ -44,12 +54,15 @@ class HistoricalImporter
                     $prefix = $m['metric_code'] === 'product' ? 'product_' : 'crude_';
                     $aliasMap[$unknown[$i]] = ['field' => $prefix.strtolower($m['item_code']).'_'.$m['actual_or_target'].'_t', 'report_status' => $m['report_status'], 'mapping_id' => $m['id']];
                 }
-                $mappingVersion = 'monthly-v1-'.substr(hash('sha256', json_encode($aliasMap, JSON_THROW_ON_ERROR)), 0, 12);
+                $mappingVersion = 'monthly-v1-'.substr(hash('sha256', json_encode([$flatSheet, $aliasMap], JSON_THROW_ON_ERROR)), 0, 12);
             }
         }
         $command = [env('IDPS_PYTHON', 'python'), '-B', base_path('../../scripts/parse_monthly.py'), $destination];
         if ($year !== null) {
             $command[] = (string) $year;
+        }
+        if ($flatSheet) {
+            array_push($command, '--flat-sheet', $flatSheet);
         }
         if ($aliasMap) {
             $command[] = '--mapping-stdin';

@@ -117,3 +117,9 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Excel workbooks retain the fixed verified adapter; arbitrary XLSX mapping and refinery-owner mapping signoff remain pending. No engineering data was approved during this batch.
 - MySQL full backend regression `php vendor/bin/phpunit --do-not-cache-result`: 40 tests /319 assertions passed including new end-to-end synthetic mapping workflow. `npm run check`: 12 tests, lint, TypeScript and Vite build passed.
 - Next: arbitrary XLSX field mapping and robust import quality reporting; then remaining dashboard, retraining comparison, UAT and owner decisions per readiness matrix. Keep pending where engineering semantics are unsettled.
+
+## Batch 10 — reviewed flat XLSX source mapping
+
+- Added explicit sheet selection for flat monthly XLSX files with `month` header, bounded workbook expansion and size, unknown-column rejection/review, separate mapping versions and worksheet/cell lineage. The legacy historical adapter remains selected when no flat sheet is specified.
+- MySQL synthetic CSV/XLSX mapping tests: 2 tests /18 assertions passed, including independent reviewer and replay idempotency. Python service/parser:17 tests passed; historical source parsing remains336 facts for each 2021–2023 year. `npm run check`:12 frontend tests, typecheck/lint/build passed.
+- This is monthly flat-sheet mapping, not arbitrary workbook interpretation, daily/shift dataset profiling, or engineering mapping signoff. Next: complete missing source workflows and daily ingestion, then approved-data evaluation and UAT/security gates.

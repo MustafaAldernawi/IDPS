@@ -60,3 +60,4 @@ API+DB migration+UI+tests+docs updated and exact command logs; no future actual 
 - [ ] Integrate mapping dictionary with importer and review UI; expose model monitoring policies and evaluations in UI; complete approved-data scientific validation and UAT.
 - [x] Monitoring/retraining policy view and forecast evaluation action; 11 frontend tests/build and 39 backend tests passed. Engineering thresholds and owner UAT remain open.
 - [x] Reviewed CSV alias mapping integrated with import and Arabic review UI; MySQL synthetic mapping workflow passes. Arbitrary XLSX mapping and engineering source approval remain pending.
+- [x] Explicit flat monthly XLSX sheet mapping and cell lineage with independent review and idempotent replay; arbitrary workbook/daily/shift mappings remain open.

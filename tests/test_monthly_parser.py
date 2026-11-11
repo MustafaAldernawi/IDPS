@@ -35,3 +35,16 @@ def test_unknown_header_requires_approved_mapping_and_keeps_original_locator(tmp
     assert result[0]['locator']['column']=='زيت ديزل'
     with pytest.raises(ValueError,match='unmapped'):
         parser.parse(p,alias_map={'زيت ديزل':'unrecognized_field'})
+
+def test_flat_xlsx_requires_explicit_sheet_and_preserves_cell_lineage(tmp_path):
+    import openpyxl
+    workbook=openpyxl.Workbook(); sheet=workbook.active; sheet.title='المصدر'
+    sheet.append(['month','زيت ديزل']); sheet.append(['2026-01',12.25])
+    path=tmp_path/'synthetic.xlsx'; workbook.save(path)
+    assert parser.unknown_headers(path,flat_sheet='المصدر')==['زيت ديزل']
+    with pytest.raises(ValueError,match='unmapped'):
+        parser.parse(path,flat_sheet='المصدر')
+    result=parser.parse(path,flat_sheet='المصدر',alias_map={'زيت ديزل':{'field':'product_diesel_actual_t','report_status':'actual','mapping_id':'approved-version'}})
+    assert result[0]['quantity']=='12.250000'
+    assert result[0]['locator']=={'sheet':'المصدر','row':2,'column':'زيت ديزل','cell':'B2'}
+    assert result[0]['mapping_version_id']=='approved-version'

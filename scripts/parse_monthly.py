@@ -41,31 +41,56 @@ def fact(period,field,value,locator,flags=None):
 
 METADATA_FIELDS = {'month','period_granularity','period_status','source_file','actual_sheet','target_sheet','qa_flags'}
 
-def unknown_headers(path):
-    with Path(path).open(encoding='utf-8-sig',newline='') as stream:
-        headers=next(csv.reader(stream),None)
+def _workbook(path):
+    import openpyxl
+    with zipfile.ZipFile(path) as archive:
+        if sum(entry.file_size for entry in archive.infolist())>40*1024*1024: raise ValueError('expanded workbook too large')
+        if any('vbaProject' in entry.filename for entry in archive.infolist()): raise ValueError('macro workbook rejected')
+    return openpyxl.load_workbook(path,read_only=True,data_only=True,keep_links=False)
+
+def _flat_headers(sheet):
+    headers=list(next(sheet.iter_rows(min_row=1,max_row=1,max_col=257,values_only=True),[]))
+    while headers and headers[-1] is None: headers.pop()
+    if any(not isinstance(h,str) for h in headers): raise ValueError('invalid workbook headers')
+    return headers
+
+def unknown_headers(path,flat_sheet=None):
+    path=Path(path)
+    if flat_sheet:
+        book=_workbook(path)
+        try:
+            if flat_sheet not in book.sheetnames: raise ValueError('unknown workbook sheet')
+            headers=_flat_headers(book[flat_sheet])
+        finally: book.close()
+    else:
+        with path.open(encoding='utf-8-sig',newline='') as stream:
+            headers=next(csv.reader(stream),None)
     if not headers or 'month' not in headers: raise ValueError('month column required')
     if len(headers)>256 or len(set(headers))!=len(headers) or any(not header.strip() for header in headers):
         raise ValueError('invalid or duplicate CSV headers')
     return [header for header in headers if header not in FIELDS and header not in METADATA_FIELDS]
 
-def parse(path,year=None,alias_map=None):
+def parse(path,year=None,alias_map=None,flat_sheet=None):
     path=Path(path)
     if path.stat().st_size>10*1024*1024: raise ValueError('file too large')
     output=[]
-    if path.suffix.lower()=='.csv':
-        unknown=unknown_headers(path)
+    if path.suffix.lower()=='.csv' or (path.suffix.lower()=='.xlsx' and flat_sheet):
+        unknown=unknown_headers(path,flat_sheet=flat_sheet)
         alias_map=alias_map or {}
         if set(unknown)!=set(alias_map) or any((target.get('field') if isinstance(target,dict) else target) not in FIELDS for target in alias_map.values()):
             raise ValueError('unmapped CSV header')
-        with path.open(encoding='utf-8-sig',newline='') as stream:
-            headers=next(csv.reader(stream))
+        book=None
+        if flat_sheet:
+            import openpyxl
+            book=_workbook(path); sheet=book[flat_sheet]; headers=_flat_headers(sheet)
+            records=(dict(zip(headers,values)) for values in sheet.iter_rows(min_row=2,max_row=10003,max_col=len(headers),values_only=True))
+        else:
+            stream=path.open(encoding='utf-8-sig',newline=''); reader=csv.DictReader(stream); headers=reader.fieldnames; records=reader
         targets=[(alias_map[header].get('field') if isinstance(alias_map.get(header),dict) else alias_map.get(header,header)) for header in headers if header in FIELDS or header in alias_map]
         if len(targets)!=len(set(targets)): raise ValueError('duplicate mapped field')
-        with path.open(encoding='utf-8-sig',newline='') as stream:
-            reader=csv.DictReader(stream); seen=set()
-            if not reader.fieldnames or 'month' not in reader.fieldnames: raise ValueError('month column required')
-            for line,row in enumerate(reader,2):
+        try:
+            seen=set()
+            for line,row in enumerate(records,2):
                 if line>10002: raise ValueError('too many rows')
                 if None in row: raise ValueError('unexpected extra CSV fields')
                 if row.get('period_granularity','month') not in ['month','monthly']: raise ValueError('monthly granularity required')
@@ -73,23 +98,25 @@ def parse(path,year=None,alias_map=None):
                 period=row['month']
                 if period in seen: raise ValueError('duplicate month')
                 seen.add(period)
-                for field in reader.fieldnames:
+                for column,field in enumerate(headers,1):
                     mapping=alias_map.get(field,field)
                     target=mapping.get('field') if isinstance(mapping,dict) else mapping
                     if target in FIELDS:
-                        observation=fact(period,target,quantity(row[field]),{'row':line,'column':field},[row['qa_flags']] if row.get('qa_flags') else [])
+                        locator={'row':line,'column':field}
+                        if flat_sheet: locator.update(sheet=flat_sheet,cell=f'{openpyxl.utils.get_column_letter(column)}{line}')
+                        observation=fact(period,target,quantity(row[field]),locator,[row['qa_flags']] if row.get('qa_flags') else [])
                         if isinstance(mapping,dict):
                             if mapping.get('report_status') not in ('actual','semi_actual') or not mapping.get('mapping_id'): raise ValueError('invalid approved mapping')
                             observation['report_status']=mapping['report_status'];observation['mapping_version_id']=mapping['mapping_id']
                         output.append(observation)
+        finally:
+            if book: book.close()
+            else: stream.close()
     elif path.suffix.lower()=='.xlsx':
         import openpyxl
-        with zipfile.ZipFile(path) as archive:
-            if sum(entry.file_size for entry in archive.infolist())>40*1024*1024: raise ValueError('expanded workbook too large')
-            if any('vbaProject' in entry.filename for entry in archive.infolist()): raise ValueError('macro workbook rejected')
         if year is None: raise ValueError('explicit workbook year required')
         if not 2000<=int(year)<=2100: raise ValueError('invalid year')
-        book=openpyxl.load_workbook(path,read_only=True,data_only=True,keep_links=False)
+        book=_workbook(path)
         mapping={5:('crude_sharara','الشرارة'),6:('crude_hamada','الحمادة'),11:('crude_total','المجموع'),15:('product_lpg','غاز النفط المسال'),16:('product_unprocessed_naphtha','نافثا غير معالجة'),17:('product_gasoline','جازولين'),18:('product_kerosene','كيروسين'),19:('product_diesel','زيت ديزل'),20:('product_heavy_fuel_oil','زيت وقود ثقيل'),21:('product_total','مجموع المنتجات')}
         try:
             for sheet,measure in [('الفعلي','actual'),('المستهدف','target')]:
@@ -124,9 +151,9 @@ if __name__=='__main__':
         import argparse
         arguments=argparse.ArgumentParser()
         arguments.add_argument('path');arguments.add_argument('year',nargs='?',type=int)
-        arguments.add_argument('--inspect',action='store_true');arguments.add_argument('--mapping-stdin',action='store_true')
+        arguments.add_argument('--inspect',action='store_true');arguments.add_argument('--mapping-stdin',action='store_true');arguments.add_argument('--flat-sheet')
         args=arguments.parse_args()
-        result=unknown_headers(args.path) if args.inspect else parse(args.path,args.year,json.load(sys.stdin) if args.mapping_stdin else None)
+        result=unknown_headers(args.path,args.flat_sheet) if args.inspect else parse(args.path,args.year,json.load(sys.stdin) if args.mapping_stdin else None,args.flat_sheet)
         print(json.dumps(result,ensure_ascii=True,separators=(',',':')))
     except (ValueError,KeyError,zipfile.BadZipFile) as error:
         print(json.dumps({'error':str(error)}));sys.exit(2)

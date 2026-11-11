@@ -2,11 +2,12 @@
 import {ref,watch} from 'vue'
 import {ApiError,rowsOf,type Api,type Row} from '../lib/api'
 import {useAccess} from '../lib/access'
-const props=defineProps<{api:Api,facility:string}>(), emit=defineEmits<{contexts:[Row[]]}>(), can=useAccess()
-const alias=ref(''),scope=ref(''),stage=ref(''),unit=ref(''),contexts=ref<Row[]>([]),queue=ref<Row[]>([]),proposals=ref<Row[]>([]),error=ref(''),success=ref(''),busy=ref(false)
+const props=defineProps<{api:Api,facility:string,flatSheet?:string}>(), emit=defineEmits<{contexts:[Row[]]}>(), can=useAccess()
+const alias=ref(''),scope=ref(props.flatSheet ?? ''),stage=ref(''),unit=ref(''),contexts=ref<Row[]>([]),queue=ref<Row[]>([]),proposals=ref<Row[]>([]),error=ref(''),success=ref(''),busy=ref(false)
 const selected=ref(''),metric=ref(''),item=ref(''),measure=ref(''),report=ref(''),reason=ref(''),reviewReason=ref('')
 watch(()=>props.facility,()=>{contexts.value=[];emit('contexts',[]);queue.value=[];proposals.value=[]})
-function add(){if(contexts.value.some(c=>c.alias===alias.value)){error.value='أُضيف اسم العمود مسبقًا.';return}contexts.value.push({alias:alias.value,source_scope:scope.value,unit_code:unit.value,granularity:'monthly',product_stage:stage.value,locator:{row:1,column:alias.value}});emit('contexts',[...contexts.value]);alias.value='';scope.value='';stage.value='';unit.value='';error.value=''}
+watch(()=>props.flatSheet,()=>{contexts.value=[];emit('contexts',[]);scope.value=props.flatSheet ?? ''})
+function add(){if(contexts.value.some(c=>c.alias===alias.value)){error.value='أُضيف اسم العمود مسبقًا.';return}const sourceScope=props.flatSheet || scope.value;const locator:Row={row:1,column:alias.value};if(props.flatSheet)locator.sheet=props.flatSheet;contexts.value.push({alias:alias.value,source_scope:sourceScope,unit_code:unit.value,granularity:'monthly',product_stage:stage.value,locator});emit('contexts',[...contexts.value]);alias.value='';scope.value=props.flatSheet ?? '';stage.value='';unit.value='';error.value=''}
 function remove(index:number){contexts.value.splice(index,1);emit('contexts',[...contexts.value])}
 async function load(){if(!props.facility)return;busy.value=true;error.value='';try{const q='?facility_id='+encodeURIComponent(props.facility);queue.value=rowsOf(await props.api('/source-mappings/unresolved'+q));proposals.value=rowsOf(await props.api('/source-mappings/proposals'+q))}catch(e){error.value=e instanceof ApiError?e.message:'تعذر تحميل مراجعات الربط'}finally{busy.value=false}}
 async function propose(){busy.value=true;error.value='';try{await props.api('/source-mappings/proposals',{method:'POST',body:{queue_id:selected.value,metric_code:metric.value,item_code:item.value,actual_or_target:measure.value,report_status:report.value,reason:reason.value}});success.value='حُفظ الاقتراح بانتظار مراجعة مستقلة.';await load()}catch(e){error.value=e instanceof ApiError?e.message:'تعذر حفظ الاقتراح'}finally{busy.value=false}}
