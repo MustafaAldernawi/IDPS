@@ -36,6 +36,7 @@ Route::prefix('v1')->group(function () {
         Route::post('source-mappings/inspect', [SourceMappingController::class, 'inspect']);
         Route::get('source-mappings/unresolved', [SourceMappingController::class, 'unresolved']);
         Route::post('source-mappings/proposals', [SourceMappingController::class, 'propose']);
+        Route::get('source-mappings/proposals', [SourceMappingController::class, 'proposals']);
         Route::post('source-mappings/proposals/{id}/approve', [SourceMappingController::class, 'approve']);
         Route::post('imports', [ImportController::class, 'store']);
         Route::get('imports/{id}/preview', [ImportController::class, 'preview']);

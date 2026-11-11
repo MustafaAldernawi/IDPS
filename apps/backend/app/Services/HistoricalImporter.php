@@ -22,26 +22,57 @@ class HistoricalImporter
             copy($path, $destination);
         }
         abort_unless(hash_file('sha256', $destination) === $sha, 409, 'Source fingerprint mismatch');
+        $aliasMap = [];
+        $mappingVersion = 'monthly-v1';
+        if ($extension === 'csv') {
+            $inspection = new Process([env('IDPS_PYTHON', 'python'), '-B', base_path('../../scripts/parse_monthly.py'), $destination, '--inspect'], base_path('../..'), timeout: 45);
+            $inspection->run();
+            if (! $inspection->isSuccessful()) {
+                throw ValidationException::withMessages(['file' => 'CSV header inspection failed']);
+            }
+            $unknown = json_decode($inspection->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+            if ($unknown) {
+                $context = $request->input('mapping_context', []);
+                $byAlias = collect($context)->keyBy('alias');
+                abort_unless($byAlias->count() === count($unknown) && collect($unknown)->every(fn ($alias) => $byAlias->has($alias)), 422, 'Explicit mapping context required for each unknown column');
+                DB::table('source_files')->insertOrIgnore(['id' => (string) Str::uuid(), 'sha256' => $sha, 'original_name' => basename($originalName), 'storage_path' => $destination, 'bytes' => filesize($path), 'created_at' => now()]);
+                $source = DB::table('source_files')->where('sha256', $sha)->first();
+                $mapped = app(SourceMappingDictionary::class)->inspect($request, ['facility_id' => $facility, 'source_file_id' => $source->id, 'entries' => collect($unknown)->map(fn ($alias) => $byAlias->get($alias))->all()]);
+                abort_if(collect($mapped)->contains(fn ($entry) => $entry['status'] !== 'mapped'), 409, 'Source mapping review required; inspect unresolved queue');
+                foreach ($mapped as $i => $entry) {
+                    $m = $entry['mapping'];
+                    $prefix = $m['metric_code'] === 'product' ? 'product_' : 'crude_';
+                    $aliasMap[$unknown[$i]] = ['field' => $prefix.strtolower($m['item_code']).'_'.$m['actual_or_target'].'_t', 'report_status' => $m['report_status'], 'mapping_id' => $m['id']];
+                }
+                $mappingVersion = 'monthly-v1-'.substr(hash('sha256', json_encode($aliasMap, JSON_THROW_ON_ERROR)), 0, 12);
+            }
+        }
         $command = [env('IDPS_PYTHON', 'python'), '-B', base_path('../../scripts/parse_monthly.py'), $destination];
         if ($year !== null) {
             $command[] = (string) $year;
         }
+        if ($aliasMap) {
+            $command[] = '--mapping-stdin';
+        }
         $process = new Process($command, base_path('../..'), timeout: 45);
+        if ($aliasMap) {
+            $process->setInput(json_encode($aliasMap, JSON_THROW_ON_ERROR));
+        }
         $process->run();
         if (! $process->isSuccessful()) {
             throw ValidationException::withMessages(['file' => 'Monthly parsing failed: '.(json_decode($process->getOutput(), true)['error'] ?? 'unsupported or invalid file')]);
         }
         $facts = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
 
-        return DB::transaction(function () use ($request, $facts, $sha, $destination, $originalName, $path, $facility, $year) {
+        return DB::transaction(function () use ($request, $facts, $sha, $destination, $originalName, $path, $facility, $year, $mappingVersion) {
             DB::table('source_files')->insertOrIgnore(['id' => (string) Str::uuid(), 'sha256' => $sha, 'original_name' => basename($originalName), 'storage_path' => $destination, 'bytes' => filesize($path), 'created_at' => now()]);
             $source = DB::table('source_files')->where('sha256', $sha)->lockForUpdate()->first();
-            $existing = DB::table('import_batches')->where('source_file_id', $source->id)->where('facility_id', $facility)->where('mapping_version', 'monthly-v1')->first();
+            $existing = DB::table('import_batches')->where('source_file_id', $source->id)->where('facility_id', $facility)->where('mapping_version', $mappingVersion)->first();
             if ($existing) {
                 return ['id' => $existing->id, 'idempotent' => true, 'status' => $existing->status];
             }
             $batch = (string) Str::uuid();
-            DB::table('import_batches')->insert(['id' => $batch, 'source_file_id' => $source->id, 'facility_id' => $facility, 'created_by' => $request->user()->id, 'mapping_version' => 'monthly-v1', 'status' => 'staged', 'created_at' => now()]);
+            DB::table('import_batches')->insert(['id' => $batch, 'source_file_id' => $source->id, 'facility_id' => $facility, 'created_by' => $request->user()->id, 'mapping_version' => $mappingVersion, 'status' => 'staged', 'created_at' => now()]);
             foreach ($facts as $fact) {
                 $row = (string) Str::uuid();
                 $id = (string) Str::uuid();

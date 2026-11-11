@@ -20,7 +20,7 @@ class ImportController extends Controller
     public function store(Request $request, HistoricalImporter $importer)
     {
         Governance::authorize($request, 'imports.write');
-        $data = $request->validate(['file' => 'required|file|max:10240', 'facility_id' => 'required|uuid|exists:facilities,id', 'year' => 'nullable|integer|min:2000|max:2100']);
+        $data = $request->validate(['file' => 'required|file|max:10240', 'facility_id' => 'required|uuid|exists:facilities,id', 'year' => 'nullable|integer|min:2000|max:2100', 'mapping_context' => 'sometimes|array|max:256', 'mapping_context.*.alias' => ['required', 'string', 'max:128', 'not_regex:/[\x00-\x1F\x7F]/'], 'mapping_context.*.source_scope' => ['required', 'string', 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'], 'mapping_context.*.unit_code' => 'required|in:t', 'mapping_context.*.granularity' => 'required|in:monthly', 'mapping_context.*.product_stage' => 'required|in:unknown,not_applicable,intermediate_stream,final_product,byproduct,fuel,waste', 'mapping_context.*.locator' => 'required|array:sheet,cell,row,column|min:1|max:4', 'mapping_context.*.locator.row' => 'sometimes|integer|min:1|max:1048576', 'mapping_context.*.locator.column' => 'sometimes|string|max:128', 'mapping_context.*.locator.sheet' => 'sometimes|string|max:255', 'mapping_context.*.locator.cell' => 'sometimes|string|max:32']);
 
         return response()->json(['data' => $importer->stage($request, $request->file('file')->path(), $request->file('file')->getClientOriginalName(), $data['facility_id'], $data['year'] ?? null)], 201);
     }
@@ -95,7 +95,7 @@ class ImportController extends Controller
             }
         }
 
-return response()->json($query->orderBy('period_month')->paginate(100));
+        return response()->json($query->orderBy('period_month')->paginate(100));
     }
 
     public function revise(Request $request, string $id)
@@ -114,9 +114,9 @@ return response()->json($query->orderBy('period_month')->paginate(100));
             $revision = collect((array) $old)->except(['approved_scope_key'])->all();
             $revision = array_merge($revision, ['id' => $newId, 'quantity' => $data['quantity'], 'import_row_id' => $rowId, 'revision_no' => $old->revision_no + 1, 'status' => 'staged', 'approved_at' => null, 'approved_by' => null, 'available_at' => now(), 'created_by' => $request->user()->id, 'supersedes_id' => $old->id]);
             DB::table('monthly_observations')->insert($revision);
-            Governance::audit($request,'revision_staged','monthly_observations',$newId,['previous_id' => $id],['quantity' => $data['quantity'], 'revision_no' => $revision['revision_no']],$data['reason']);
+            Governance::audit($request, 'revision_staged', 'monthly_observations', $newId, ['previous_id' => $id], ['quantity' => $data['quantity'], 'revision_no' => $revision['revision_no']], $data['reason']);
 
-            return response()->json(['data' => ['id' => $newId, 'status' => 'staged', 'supersedes_id' => $id]],201);
+            return response()->json(['data' => ['id' => $newId, 'status' => 'staged', 'supersedes_id' => $id]], 201);
         }, 3);
     }
 }

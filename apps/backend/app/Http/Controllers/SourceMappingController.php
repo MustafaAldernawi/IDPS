@@ -37,6 +37,14 @@ class SourceMappingController extends Controller
         return response()->json(['data' => $dictionary->propose($request, $data)], 201);
     }
 
+    public function proposals(Request $request, SourceMappingDictionary $dictionary)
+    {
+        $data = $request->validate(['facility_id' => 'required|uuid|exists:facilities,id']);
+        $dictionary->requireScope($request, 'imports.read', $data['facility_id']);
+
+        return response()->json(['data' => DB::table('source_mapping_versions')->where('facility_id', $data['facility_id'])->where('status', 'pending')->orderBy('created_at')->limit(100)->get()]);
+    }
+
     public function approve(Request $request, string $id, SourceMappingDictionary $dictionary)
     {
         $data = $request->validate(['reason' => 'required|string|min:10|max:2000']);

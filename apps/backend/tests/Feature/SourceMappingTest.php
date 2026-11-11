@@ -46,6 +46,8 @@ class SourceMappingTest extends TestCase
         $this->assertDatabaseCount('source_mapping_queue', 1);
         $proposal = ['queue_id' => $first, 'metric_code' => 'product', 'item_code' => 'DIESEL', 'actual_or_target' => 'actual', 'report_status' => 'actual', 'reason' => 'Synthetic source mapping'];
         $id = $this->postJson('/map/proposals', $proposal)->assertCreated()->assertJsonPath('data.status', 'pending')->json('data.id');
+        $this->actingAs($engineer)->getJson('/api/v1/source-mappings/proposals?facility_id='.$facility)->assertOk()->assertJsonPath('data.0.id', $id);
+        $this->actingAs($steward);
         $this->postJson('/map/inspect', $context)->assertOk()->assertJsonPath('data.0.status', 'unresolved');
         $this->postJson('/map/proposals/'.$id.'/approve', ['reason' => 'self review prohibited'])->assertForbidden();
         $this->actingAs($engineer)->postJson('/map/proposals/'.$id.'/approve', ['reason' => 'Independent synthetic mapping review'])->assertOk()->assertJsonPath('data.status', 'approved');

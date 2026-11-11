@@ -110,3 +110,10 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Added Arabic view for evaluation summaries and governed monthly retraining policies; users select facility/product and may filter engine/model. Insufficient samples and ambiguous scopes are explicit; no statistical drift claim is shown. Added evaluation action for completed forecasts against matching approved actuals.
 - `npm run check`: 11 tests, lint, TypeScript and Vite build passed. Full MySQL backend regression: 39 tests /309 assertions passed. Current FastAPI health training SHA matches source. Scheduler and worker restarted under managed local runtime after checking process identities.
 - Remaining: integrate unknown-source mapping with importer and reviewer UI, verify real approved-data retraining only when owner approvals/adequate data exist, complete operational/safety/security and full UAT gates in readiness matrix. No model promotion performed.
+
+## Batch 9 — reviewed CSV alias integration
+
+- Unknown CSV headers stop import before any observation is created. The uploader explicitly supplies monthly scope, tonne unit and product stage; the source is fingerprinted, unknown mapping enters review, and an independent process engineer approves its version. Re-upload with the same context resolves the approved mapping and records the exact mapping version in raw lineage. Arabic review UI supports contexts, proposals and decisions. Unknown semantics are not guessed.
+- Excel workbooks retain the fixed verified adapter; arbitrary XLSX mapping and refinery-owner mapping signoff remain pending. No engineering data was approved during this batch.
+- MySQL full backend regression `php vendor/bin/phpunit --do-not-cache-result`: 40 tests /319 assertions passed including new end-to-end synthetic mapping workflow. `npm run check`: 12 tests, lint, TypeScript and Vite build passed.
+- Next: arbitrary XLSX field mapping and robust import quality reporting; then remaining dashboard, retraining comparison, UAT and owner decisions per readiness matrix. Keep pending where engineering semantics are unsettled.
