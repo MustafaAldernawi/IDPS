@@ -30,5 +30,7 @@ class DailyReadinessTest extends TestCase
         $unprivileged = User::factory()->create();
         $this->actingAs($unprivileged)->getJson('/api/v1/data/readiness/daily?facility_id='.$facility.'&product_id='.$product.'&from=2026-01-01&to=2026-01-04')->assertForbidden();
         $this->actingAs($user)->getJson('/api/v1/data/readiness/daily?facility_id='.$facility.'&product_id='.$product.'&from=2026-01-01&to=2026-01-04')->assertOk()->assertJsonPath('data.expected_days', 4)->assertJsonPath('data.observed_days', 1)->assertJsonPath('data.zero_days', 1)->assertJsonPath('data.missing_days', 3)->assertJsonPath('data.status', 'DAILY_MODEL_NOT_READY');
+        DB::table('production_records')->insert(['id' => (string) Str::uuid(), 'facility_id' => $facility, 'product_id' => $product, 'period_month' => '2026-01', 'business_date' => '2026-01-01', 'unit_code' => 't', 'quantity' => '5', 'status' => 'approved', 'source_reference' => 'second synthetic measurement', 'created_by' => $user->id, 'approved_by' => $reviewer->id, 'approved_at' => now(), 'available_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $this->getJson('/api/v1/data/readiness/daily?facility_id='.$facility.'&product_id='.$product.'&from=2026-01-01&to=2026-01-04')->assertOk()->assertJsonPath('data.expected_days', 4)->assertJsonPath('data.observed_days', 0)->assertJsonPath('data.zero_days', 0)->assertJsonPath('data.missing_days', 3)->assertJsonPath('data.ambiguous_days', 1)->assertJsonPath('data.ambiguous_dates.0', '2026-01-01');
     }
 }

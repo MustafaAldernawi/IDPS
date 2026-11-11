@@ -22,14 +22,17 @@ class DailyReadinessController extends Controller
         } else {
             $query->whereNull('unit_id');
         }
-        $rows = $query->select('business_date')->selectRaw('COUNT(quantity) AS value_count, SUM(quantity) AS quantity')->groupBy('business_date')->get()->keyBy('business_date');
+        $rows = $query->select('business_date')->selectRaw('COUNT(*) AS record_count, COUNT(quantity) AS value_count, MIN(quantity) AS quantity')->groupBy('business_date')->get()->keyBy('business_date');
         $missing = [];
+        $ambiguous = [];
         $observed = 0;
         $zero = 0;
         for ($day = $from; $day->lte($to); $day = $day->addDay()) {
             $key = $day->format('Y-m-d');
             $row = $rows->get($key);
-            if (! $row || ! $row->value_count) {
+            if ($row && $row->record_count > 1) {
+                $ambiguous[] = $key;
+            } elseif (! $row || ! $row->value_count) {
                 $missing[] = $key;
             } else {
                 $observed++;
@@ -38,8 +41,8 @@ class DailyReadinessController extends Controller
                 }
             }
         }
-        $expected = $observed + count($missing);
+        $expected = $observed + count($missing) + count($ambiguous);
 
-        return response()->json(['data' => ['facility_id' => $data['facility_id'], 'product_id' => $data['product_id'], 'from' => $data['from'], 'to' => $data['to'], 'expected_days' => $expected, 'observed_days' => $observed, 'zero_days' => $zero, 'missing_days' => count($missing), 'missing_dates' => $missing, 'coverage_pct' => bcdiv((string) ($observed * 100), (string) $expected, 2), 'status' => 'DAILY_MODEL_NOT_READY', 'reason' => 'Coverage alone cannot establish validated features, operating regimes or model readiness.']]);
+        return response()->json(['data' => ['facility_id' => $data['facility_id'], 'product_id' => $data['product_id'], 'from' => $data['from'], 'to' => $data['to'], 'expected_days' => $expected, 'observed_days' => $observed, 'zero_days' => $zero, 'missing_days' => count($missing), 'missing_dates' => $missing, 'ambiguous_days' => count($ambiguous), 'ambiguous_dates' => $ambiguous, 'coverage_pct' => bcdiv((string) ($observed * 100), (string) $expected, 2), 'status' => 'DAILY_MODEL_NOT_READY', 'reason' => 'Coverage alone cannot establish validated features, operating regimes or model readiness.']]);
     }
 }

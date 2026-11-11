@@ -148,3 +148,9 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 - Chemical variance now returns source references and record IDs for unique approved inputs, plus target revision; the Arabic comparison shows both source references. Ambiguous actual groups deliberately expose no selected actual source. Updated stale RF-019/082/085/086/100 readiness entries based on already verified code and drills; none is claimed complete.
 - Focused MySQL chemical test: 1 test /22 assertions passed. Frontend `npm run check`: 14 tests, lint, typecheck and build passed. No migration, source change or approval of refinery data.
 - Next: implement other independent V1 gaps and maintain owner-dependent engineering thresholds and UAT as pending.
+
+## Batch 15 — daily coverage ambiguity
+
+- Daily coverage now counts a day with multiple approved full-day records as ambiguous, excludes it from observed coverage and zero counts, and reports its date for review. It does not add records together or treat ambiguity as missing. Arabic UI presents ambiguous counts and dates.
+- Focused MySQL regression: 1 test /15 assertions passed, including null, zero, shifts and duplicate approved daily records. `npm run check`: 14 frontend tests, lint, typecheck and build passed. No source data changed.
+- Next: continue daily/shift data profiling, source ingestion and independent V1 gaps; preserve engineering definition blockers and do not infer records from monthly data.

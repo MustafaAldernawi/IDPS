@@ -64,10 +64,12 @@ async function inspect() {
           <div><dt>الأيام المرصودة</dt><dd>{{ result.observed_days }}</dd></div>
           <div><dt>الأيام ذات القيمة صفر</dt><dd>{{ result.zero_days }}</dd></div>
           <div><dt>الأيام المفقودة</dt><dd>{{ result.missing_days }}</dd></div>
+          <div><dt>الأيام ذات السجلات الملتبسة</dt><dd>{{ result.ambiguous_days ?? 'غير متاح' }}</dd></div>
           <div><dt>نسبة التغطية</dt><dd>{{ result.coverage_pct ?? 'غير متاحة' }}٪</dd></div>
           <div><dt>حالة النموذج</dt><dd>{{ result.status === 'DAILY_MODEL_NOT_READY' ? 'النموذج اليومي غير جاهز' : String(result.status ?? 'غير متاحة') }}</dd></div>
         </dl>
         <p>تُحسب الأيام من السجلات اليومية المعتمدة فقط. سجلات الورديات تحتاج مراجعة اكتمال مستقلة.</p>
+        <div v-if="Array.isArray(result.ambiguous_dates) && result.ambiguous_dates.length"><h4>تواريخ تتطلب مراجعة لتعدد السجلات</h4><ul><li v-for="day in result.ambiguous_dates" :key="String(day)">{{ day }}</li></ul></div>
         <div v-if="Array.isArray(result.missing_dates) && result.missing_dates.length"><h4>التواريخ المفقودة</h4><ul><li v-for="day in result.missing_dates" :key="String(day)">{{ day }}</li></ul></div>
         <p v-else>لا توجد تواريخ مفقودة ضمن الفترة المعروضة.</p>
       </div>
