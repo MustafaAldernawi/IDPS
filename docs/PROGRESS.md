@@ -157,3 +157,6 @@ Unresolved source totals and 2023 semi-actual conflicts; final product stages; f
 
 ## Batch 16 — dashboard and shared workspace
 Dashboard shows permission-scoped Laravel register totals, explicitly separate from KPI filters. Shared shell typography and production/planning list failure states improved. npm run check passed (14 tests, lint, types, build); visual QA deferred. Next: production/planning editing and approval journeys.
+
+## Batch 17 — operational revisions and search
+Draft and rejected revisions preserve lineage and require author permission; approved records stay effective until a replacement is independently approved. Added scoped reference and ID search (plan titles also searchable). MySQL OperationsTest: 10 tests / 99 assertions; frontend npm run check: 14 tests, lint, types and build. Next: revision timeline, planning-specific lifecycle acceptance and dashboard scope.

@@ -69,6 +69,22 @@ class OperationsTest extends TestCase
         $this->assertDatabaseHas('production_records', ['id' => $new, 'revision_no' => 2, 'status' => 'approved']);
     }
 
+    public function test_author_can_revise_a_draft_and_resubmit_after_rejection(): void
+    {
+        [$producer, $reviewer, $facility, $product] = $this->fixtures();
+        $endpoint = '/api/v1/production-records';
+        $payload = $this->production($facility, $product);
+        $draft = $this->actingAs($producer)->postJson($endpoint, $payload)->assertCreated()->json('data.id');
+        $edited = $this->postJson($endpoint, $payload + ['replaces_id' => $draft, 'notes' => 'Correct draft'])->assertCreated()->json('data.id');
+        $this->postJson("$endpoint/$draft/submit")->assertConflict();
+        $this->postJson("$endpoint/$edited/submit")->assertOk();
+        $this->actingAs($reviewer)->postJson("$endpoint/$edited/reject", ['reason' => 'Check the source'])->assertOk();
+        $corrected = $this->actingAs($producer)->postJson($endpoint, $payload + ['replaces_id' => $edited, 'notes' => 'Source rechecked'])->assertCreated()->assertJsonPath('data.revision_no', 3)->json('data.id');
+        $this->postJson("$endpoint/$corrected/submit")->assertOk();
+        $this->actingAs($reviewer)->postJson("$endpoint/$corrected/approve", ['reason' => 'Independent verification'])->assertOk();
+        $this->assertDatabaseHas('production_records', ['id' => $edited, 'status' => 'rejected']);
+    }
+
     public function test_scope_filters_reads_and_rejects_cross_facility_writes(): void
     {
         [$producer, , $facility, $product] = $this->fixtures();

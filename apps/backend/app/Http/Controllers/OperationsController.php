@@ -37,7 +37,16 @@ class OperationsController extends Controller
                 $query->where($filter, $request->input($filter));
             }
         }
-        $result = $query->orderByDesc('created_at')->paginate(min(100, max(1, $request->integer('per_page', 25))));
+        $search = $request->validate(['q' => 'nullable|string|max:100'])['q'] ?? null;
+        if ($search !== null && $resource !== 'events') {
+            $query->where(function (Builder $filter) use ($search, $resource): void {
+                $filter->where('id', $search)->orWhereLike('source_reference', '%'.$search.'%');
+                if ($resource === 'plans') {
+                    $filter->orWhereLike('title', '%'.$search.'%');
+                }
+            });
+        }
+        $result = $query->orderByDesc('created_at')->orderByDesc('id')->paginate(min(100, max(1, $request->integer('per_page', 25))));
         $items = array_map(fn ($row) => $this->decorate($resource, (array) $row), $result->items());
 
         return response()->json(['data' => $items, 'meta' => ['total' => $result->total(), 'current_page' => $result->currentPage(), 'last_page' => $result->lastPage()]]);
@@ -61,7 +70,8 @@ class OperationsController extends Controller
             $revision = 1;
             if ($replaces) {
                 $old = DB::table($table)->where('id', $replaces)->lockForUpdate()->first();
-                abort_unless($old && $old->status === 'approved', 409, 'Only an approved record can be corrected by a new revision.');
+                abort_unless($old && in_array($old->status, ['approved', 'draft', 'rejected'], true), 409, 'Record cannot be revised in its current state.');
+                abort_if($old->status !== 'approved' && $old->created_by !== $request->user()->id, 403, 'Only the author may revise this record.');
                 abort_unless($old->facility_id === $data['facility_id'] && $old->unit_id === ($data['unit_id'] ?? null), 422, 'Revision scope must match original.');
                 foreach (['period_month', 'business_date', 'shift_code', 'unit_code', 'product_id', 'crude_id', 'carrier_code', 'category_code', 'chemical_code', 'parameter_code'] as $dimension) {
                     if (property_exists($old, $dimension)) {
@@ -80,6 +90,10 @@ class OperationsController extends Controller
             $data['created_at'] = $data['updated_at'] = now('UTC')->format('Y-m-d H:i:s.u');
             $data['unit_code'] ??= 't';
             DB::table($table)->insert($data);
+            if ($replaces && $old->status === 'draft') {
+                DB::table($table)->where('id', $old->id)->update(['status' => 'superseded', 'updated_at' => $data['updated_at']]);
+                Governance::audit($request, 'supersede', $resource, $old->id, (array) $old, array_replace((array) $old, ['status' => 'superseded']), $data['notes']);
+            }
             foreach ($children as $child) {
                 DB::table($resource === 'plans' ? 'production_targets' : 'blend_components')->insert([
                     'id' => (string) Str::uuid(),
@@ -124,16 +138,28 @@ class OperationsController extends Controller
                 'submit' => 'submitted', 'approve' => 'approved', default => 'rejected'
             }, 'updated_at' => now('UTC')->format('Y-m-d H:i:s.u')];
             if ($action === 'approve') {
+                $previous = $row->replaces_id;
+                $original = null;
+                while ($previous) {
+                    $ancestor = DB::table($table)->where('id', $previous)->lockForUpdate()->first();
+                    abort_unless($ancestor, 409, 'Revision history is incomplete.');
+                    if ($ancestor->status === 'approved') {
+                        $original = $ancestor;
+                        break;
+                    }
+                    abort_if($ancestor->approved_at !== null, 409, 'The approved ancestor was already superseded.');
+                    abort_unless(in_array($ancestor->status, ['rejected', 'superseded'], true), 409);
+                    $previous = $ancestor->replaces_id;
+                }
                 $changes['approved_by'] = $request->user()->id;
                 $changes['approved_at'] = now('UTC')->format('Y-m-d H:i:s.u');
                 if ($resource === 'plans') {
                     $scope = $row->facility_id.':'.($row->unit_id ?? 'FACILITY').':'.$row->period_month;
-                    abort_if(DB::table($table)->where('active_scope', $scope)->when($row->replaces_id, fn ($q) => $q->where('id', '!=', $row->replaces_id))->exists(), 409, 'An approved target plan already exists for this scope; use a revision.');
+                    abort_if(DB::table($table)->where('active_scope', $scope)->when($original, fn ($q) => $q->where('id', '!=', $original->id))->exists(), 409, 'An approved target plan already exists for this scope; use a revision.');
                     $changes['active_scope'] = $scope;
                 }
-                if ($row->replaces_id) {
-                    $old = DB::table($table)->where('id', $row->replaces_id)->lockForUpdate()->first();
-                    abort_unless($old && $old->status === 'approved', 409, 'Original was superseded by another revision.');
+                if ($original) {
+                    $old = $original;
                     $oldChanges = ['status' => 'superseded'];
                     if ($resource === 'plans') {
                         $oldChanges['active_scope'] = null;
